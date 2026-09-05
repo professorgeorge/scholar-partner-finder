@@ -221,6 +221,25 @@ details.raw pre { white-space: pre-wrap; background: var(--surface-2); padding: 
 input[type=search] { width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 8px 12px; outline: none; color: var(--text); }
 input[type=search]:focus { border-color: var(--accent); background: var(--surface); }
 
+/* ---- project control (top bar) ---- */
+.project-ctl { display: flex; align-items: center; gap: 6px; }
+.project-ctl select { width: auto; max-width: 200px; padding: 6px 10px; border-radius: 8px; font-size: 13px; font-weight: 600; background: var(--surface-2); }
+.project-ctl .icon-btn { font-size: 12.5px; font-weight: 650; white-space: nowrap; }
+@media (max-width: 720px) { .project-ctl select { max-width: 130px; } .topbar .roster-count { display: none; } }
+
+/* ---- projects panel (settings) ---- */
+.proj-list { display: flex; flex-direction: column; gap: 6px; }
+.proj-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
+.proj-row.active { border-color: var(--accent); }
+.proj-row > div:first-child { flex: 1; min-width: 0; }
+.proj-row .acts { display: flex; gap: 6px; }
+
+/* ---- footer (credit + disclaimer) ---- */
+.appfoot { max-width: 1120px; margin: 0 auto; padding: 18px 20px 34px; color: var(--text-faint); font-size: 11.5px; line-height: 1.5; border-top: 1px solid var(--border); }
+.appfoot .credit { margin: 0 0 6px; font-size: 12px; }
+.appfoot .credit a { color: var(--accent); font-weight: 600; }
+.appfoot .disclaimer { margin: 0; max-width: 900px; }
+
 /* ---- editable requirement chips ---- */
 .chip.req { padding-left: 6px; }
 .chip.req .star { cursor: pointer; color: var(--text-faint); font-size: 13px; line-height: 1; }

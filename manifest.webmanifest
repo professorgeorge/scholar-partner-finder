@@ -1,7 +1,7 @@
 {
   "name": "Scholar Partner Finder",
   "short_name": "Partner Finder",
-  "description": "Find complementary research collaborators and build RFP-ready teams from scholars' CVs — locally and privately.",
+  "description": "Explore research complementarities and assemble RFP-ready teams from scholars' CVs. Runs locally and privately on your device.",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",

@@ -122,6 +122,32 @@ async function main() {
   const rosterShown = await evalJs("document.querySelectorAll('#rosterList .scholar-row').length");
   check(rosterShown === 1, 'roster search narrows to matching scholars (' + rosterShown + ')');
   await evalJs("(function(){var s=document.getElementById('rosterSearch'); s.value=''; s.dispatchEvent(new Event('input'));})()");
+
+  // Projects: the demo data loaded into its own isolated sample project.
+  const activeOpt = await evalJs("(function(){var s=document.getElementById('projectSelect'); return s.options[s.selectedIndex].text;})()");
+  check(/demo/i.test(activeOpt), 'sample data loaded into the demo project (' + activeOpt + ')');
+  check(/demo data/i.test(await evalJs("document.getElementById('rosterList').innerText")), 'demo banner shown in the sample project');
+
+  // A new project starts empty and isolated from the demo roster.
+  await evalJs("window.prompt=function(){return 'Test Project';}");
+  await evalJs("document.getElementById('newProjectBtn').click()");
+  await sleep(300);
+  const newCount = await evalJs("document.querySelectorAll('#rosterList .scholar-row').length");
+  check(newCount === 0, 'a new project starts with an empty roster (isolation) (' + newCount + ')');
+  const optCount = await evalJs("document.getElementById('projectSelect').options.length");
+  check(optCount >= 3, 'project switcher lists all projects (' + optCount + ')');
+
+  // Switching back to the demo project restores its 8 scholars.
+  await evalJs("(function(){var s=document.getElementById('projectSelect'); var demo=[].slice.call(s.options).filter(function(o){return /demo/i.test(o.text);})[0]; s.value=demo.value; s.dispatchEvent(new Event('change'));})()");
+  await sleep(300);
+  const backCount = await evalJs("document.querySelectorAll('#rosterList .scholar-row').length");
+  check(backCount === 8, 'switching back to demo restores its roster (' + backCount + ')');
+
+  // Footer credit and disclaimer.
+  const bodyText = await evalJs("document.body.innerText");
+  check(/Professor Babu George/.test(bodyText), 'footer credit present');
+  check(/without warranties/i.test(bodyText), 'footer legal disclaimer present');
+
   await evalJs("document.querySelector('[data-view=rfp]').click()");
 
   // Team explorer

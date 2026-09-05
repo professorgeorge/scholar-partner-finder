@@ -11,7 +11,7 @@
   'use strict';
 
   var DB_NAME = 'scholar_partner_finder';
-  var DB_VERSION = 1;
+  var DB_VERSION = 2;
   var dbPromise = null;
 
   function open() {
@@ -24,6 +24,9 @@
         if (!db.objectStoreNames.contains('profiles')) db.createObjectStore('profiles', { keyPath: 'id' });
         if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta', { keyPath: 'key' });
         if (!db.objectStoreNames.contains('searches')) db.createObjectStore('searches', { keyPath: 'id' });
+        // v2: projects (workspaces). Each profile carries a projectId so a
+        // user's separate projects — and the demo data — never mix.
+        if (!db.objectStoreNames.contains('projects')) db.createObjectStore('projects', { keyPath: 'id' });
       };
       req.onsuccess = function () { resolve(req.result); };
       req.onerror = function () { reject(req.error); };
@@ -58,11 +61,33 @@
   var store = {
     available: typeof indexedDB !== 'undefined',
 
-    getProfiles: function () { return getAll('profiles'); },
+    // Profiles. Pass a projectId to get only that project's roster; omit it
+    // for the whole store (used once at startup to migrate legacy profiles).
+    getProfiles: function (projectId) {
+      return getAll('profiles').then(function (arr) {
+        return projectId == null ? arr : arr.filter(function (p) { return p.projectId === projectId; });
+      });
+    },
     putProfile: function (p) { return tx('profiles', 'readwrite', function (s) { s.put(p); }); },
     putProfiles: function (arr) { return tx('profiles', 'readwrite', function (s) { arr.forEach(function (p) { s.put(p); }); }); },
     deleteProfile: function (id) { return tx('profiles', 'readwrite', function (s) { s.delete(id); }); },
     clearProfiles: function () { return tx('profiles', 'readwrite', function (s) { s.clear(); }); },
+    deleteProjectProfiles: function (projectId) {
+      return open().then(function (db) {
+        return new Promise(function (resolve, reject) {
+          var t = db.transaction('profiles', 'readwrite');
+          var req = t.objectStore('profiles').openCursor();
+          req.onsuccess = function (e) { var c = e.target.result; if (c) { if (c.value.projectId === projectId) c.delete(); c.continue(); } };
+          t.oncomplete = function () { resolve(); };
+          t.onerror = function () { reject(t.error); };
+        });
+      });
+    },
+
+    // Projects (workspaces).
+    getProjects: function () { return getAll('projects'); },
+    putProject: function (proj) { return tx('projects', 'readwrite', function (s) { s.put(proj); }); },
+    deleteProject: function (id) { return tx('projects', 'readwrite', function (s) { s.delete(id); }); },
 
     getSetting: function (key, dflt) {
       return open().then(function (db) {

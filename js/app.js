@@ -11,7 +11,11 @@
   var title = function (s) { return SPF.engine.titleCase(s); };
 
   var state = {
-    profiles: [], lastRfp: null, lastCorpus: null, lastResults: null, lastTeam: null, lastTopics: null,
+    profiles: [],        // active project's roster (a filtered view of _all)
+    _all: [],            // every profile across projects, in memory
+    projects: [],        // [{id, name, createdAt, isSample}]
+    activeProjectId: null,
+    lastRfp: null, lastCorpus: null, lastResults: null, lastTeam: null, lastTopics: null,
     baseRfp: null, lastRfpText: '', rosterQuery: '',
     rfpEdits: { removed: [], added: [], boosts: {} },
     teamConstraints: { include: [], exclude: [] }
@@ -38,6 +42,94 @@
     if (SPF.store) SPF.store.setSetting('theme', next);
   }
 
+  // ---------- projects (workspaces) ----------
+  // Every roster lives inside a named project. A user's projects stay isolated
+  // from one another, and the bundled demo data lives in its own sample project
+  // so it can never blend into real work.
+  var SAMPLE_PROJECT_NAME = 'Sample data';
+  function uid(prefix) { return (prefix || 'p_') + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function currentProject() { return state.projects.filter(function (p) { return p.id === state.activeProjectId; })[0] || null; }
+  function refreshActiveProfiles() { state.profiles = state._all.filter(function (p) { return p.projectId === state.activeProjectId; }); }
+
+  function renderProjectSelect() {
+    var sel = $('projectSelect'); if (!sel) return;
+    var items = state.projects.slice().sort(function (a, b) {
+      return ((a.isSample ? 1 : 0) - (b.isSample ? 1 : 0)) || ((a.createdAt || 0) - (b.createdAt || 0));
+    });
+    sel.innerHTML = items.map(function (p) {
+      return '<option value="' + p.id + '"' + (p.id === state.activeProjectId ? ' selected' : '') + '>' +
+        esc(p.name) + (p.isSample ? ' (demo)' : '') + '</option>';
+    }).join('');
+  }
+
+  function createProject(name, opts) {
+    opts = opts || {};
+    var proj = { id: uid(), name: (name || 'Untitled project').trim(), createdAt: Date.now(), isSample: !!opts.isSample };
+    state.projects.push(proj);
+    if (SPF.store && SPF.store.available) SPF.store.putProject(proj);
+    return proj;
+  }
+
+  function findSampleProject() { return state.projects.filter(function (p) { return p.isSample; })[0] || null; }
+
+  function switchProject(id) {
+    if (!id || id === state.activeProjectId) { renderProjectSelect(); return; }
+    state.activeProjectId = id;
+    if (SPF.store && SPF.store.available) SPF.store.setSetting('activeProject', id);
+    // Entering a different workspace: drop RFP results tied to the old roster.
+    state.baseRfp = null; state.lastRfpText = '';
+    state.rfpEdits = { removed: [], added: [], boosts: {} };
+    state.teamConstraints = { include: [], exclude: [] };
+    state.rosterQuery = ''; if ($('rosterSearch')) $('rosterSearch').value = '';
+    if ($('rfpResults')) $('rfpResults').innerHTML = rfpEmptyHtml();
+    refreshActiveProfiles();
+    renderProjectSelect(); renderRoster(); updateCount();
+  }
+
+  function newProjectPrompt() {
+    var name = window.prompt('Name this project (e.g. “NSF Smart Communities” or “College of Engineering roster”):', '');
+    if (name === null) return;
+    name = name.trim(); if (!name) return;
+    var proj = createProject(name);
+    switchProject(proj.id);
+    setView('roster');
+    toast('Created project “' + proj.name + '”. Add CVs to build its roster.');
+  }
+
+  function renameActiveProject() {
+    var proj = currentProject(); if (!proj) return;
+    if (proj.isSample) { toast('The demo project cannot be renamed.', true); return; }
+    var name = window.prompt('Rename project:', proj.name);
+    if (name === null) return; name = name.trim(); if (!name) return;
+    proj.name = name;
+    if (SPF.store && SPF.store.available) SPF.store.putProject(proj);
+    renderProjectSelect(); renderProjectsPanel(); toast('Renamed to “' + name + '”');
+  }
+
+  function deleteActiveProject() {
+    var proj = currentProject(); if (!proj) return;
+    var realCount = state.projects.filter(function (p) { return !p.isSample; }).length;
+    if (!proj.isSample && realCount <= 1) { toast('This is your only project. Create another before deleting it.', true); return; }
+    var n = state._all.filter(function (p) { return p.projectId === proj.id; }).length;
+    if (!window.confirm('Delete project “' + proj.name + '” and its ' + n + ' scholar' + (n === 1 ? '' : 's') + ' from this device? This cannot be undone.')) return;
+    state._all = state._all.filter(function (p) { return p.projectId !== proj.id; });
+    state.projects = state.projects.filter(function (p) { return p.id !== proj.id; });
+    if (SPF.store && SPF.store.available) { SPF.store.deleteProjectProfiles(proj.id); SPF.store.deleteProject(proj.id); }
+    var next = state.projects.filter(function (p) { return !p.isSample; })[0] || state.projects[0];
+    state.activeProjectId = null;
+    switchProject(next ? next.id : (createProject('My first project').id));
+    renderProjectsPanel();
+    toast('Deleted project “' + proj.name + '”');
+  }
+
+  // Register a freshly built profile into memory under the active project.
+  function addProfileToState(prof, projectId) {
+    prof.projectId = projectId || state.activeProjectId;
+    state._all.push(prof);
+    if (prof.projectId === state.activeProjectId) state.profiles.push(prof);
+    return prof;
+  }
+
   // ---------- navigation ----------
   function setView(name) {
     ['rfp', 'roster', 'team', 'settings'].forEach(function (v) {
@@ -45,6 +137,32 @@
     });
     Array.prototype.forEach.call($('nav').children, function (b) { b.classList.toggle('active', b.dataset.view === name); });
     if (name === 'team') renderTeamExplorer();
+    if (name === 'settings') renderProjectsPanel();
+  }
+
+  function renderProjectsPanel() {
+    var box = $('projectsList'); if (!box) return;
+    box.innerHTML = '';
+    var items = state.projects.slice().sort(function (a, b) {
+      return ((a.isSample ? 1 : 0) - (b.isSample ? 1 : 0)) || ((a.createdAt || 0) - (b.createdAt || 0));
+    });
+    items.forEach(function (p) {
+      var count = state._all.filter(function (x) { return x.projectId === p.id; }).length;
+      var row = el('div', 'proj-row' + (p.id === state.activeProjectId ? ' active' : ''));
+      var info = el('div');
+      info.innerHTML = '<strong>' + esc(p.name) + '</strong>' +
+        (p.isSample ? ' <span class="badge amber" style="font-size:9px">demo</span>' : '') +
+        (p.id === state.activeProjectId ? ' <span class="badge green" style="font-size:9px">active</span>' : '') +
+        '<div class="hint">' + count + ' scholar' + (count === 1 ? '' : 's') + '</div>';
+      var acts = el('div', 'acts');
+      if (p.id !== state.activeProjectId) {
+        var open = el('button', 'btn ghost small', 'Open');
+        open.onclick = function () { switchProject(p.id); renderProjectsPanel(); };
+        acts.appendChild(open);
+      }
+      row.appendChild(info); row.appendChild(acts);
+      box.appendChild(row);
+    });
   }
 
   // ---------- avatar ----------
@@ -69,8 +187,19 @@
 
   function renderRoster() {
     var box = $('rosterList'); box.innerHTML = '';
+    var proj = currentProject();
+    if (proj && proj.isSample) {
+      var banner = el('div', 'callout warn'); banner.style.margin = '0 14px 10px';
+      banner.innerHTML = 'This is bundled <strong>demo data</strong>, kept separate from your own projects. To work with real CVs, switch to (or create) another project.';
+      var mk = el('button', 'btn small'); mk.textContent = 'New project'; mk.style.marginTop = '8px'; mk.onclick = newProjectPrompt;
+      banner.appendChild(mk);
+      box.appendChild(banner);
+    }
     if (!state.profiles.length) {
-      box.appendChild(el('div', 'empty', '<div class="big">📚</div><p>No scholars yet. Drop CV files, paste a CV, or load the samples.</p>'));
+      var msg = proj && proj.isSample
+        ? '<div class="big">📚</div><p>The demo project is empty. Use “Load 8 sample scholars”.</p>'
+        : '<div class="big">📚</div><p>No scholars in <strong>' + esc(proj ? proj.name : 'this project') + '</strong> yet. Drop CV files, paste a CV, or load the samples into the demo project.</p>';
+      box.appendChild(el('div', 'empty', msg));
       return;
     }
     var q = (state.rosterQuery || '').trim().toLowerCase();
@@ -101,10 +230,20 @@
     });
   }
 
-  function persist(p) { if (SPF.store && SPF.store.available) return SPF.store.putProfile(p); return Promise.resolve(); }
+  function rfpEmptyHtml() {
+    return '<div class="empty card pad"><div class="big">🎯</div><p><strong>Rank your scholars against an opportunity.</strong><br>' +
+      'Add CVs to your roster, paste an RFP, and get an explainable shortlist, a coverage-maximising team, capacity gaps, and collaboration topics.</p></div>';
+  }
+
+  function persist(p) {
+    if (state.activeProjectId && p.projectId == null) p.projectId = state.activeProjectId;
+    if (SPF.store && SPF.store.available) return SPF.store.putProfile(p);
+    return Promise.resolve();
+  }
 
   function removeProfile(p) {
     state.profiles = state.profiles.filter(function (x) { return x.id !== p.id; });
+    state._all = state._all.filter(function (x) { return x.id !== p.id; });
     if (SPF.store && SPF.store.available) SPF.store.deleteProfile(p.id);
     renderRoster(); updateCount();
   }
@@ -114,9 +253,21 @@
 
   function normName(n) { return String(n || '').trim().toLowerCase().replace(/\s+/g, ' '); }
 
+  // Guard: keep the user's own CVs out of the read-only demo project.
+  function blockedBySampleProject() {
+    var proj = currentProject();
+    if (proj && proj.isSample) {
+      toast('The demo project is for sample data only. Create or switch to another project to add your own CVs.', true);
+      newProjectPrompt();
+      return true;
+    }
+    return false;
+  }
+
   async function ingestFiles(files) {
     var list = Array.prototype.slice.call(files).filter(function (f) { return ACCEPT.test(f.name); });
     if (!list.length) { toast('No supported files found (PDF, DOCX, TXT, MD, RTF, HTML).', true); return; }
+    if (blockedBySampleProject()) return;
     var existing = Object.create(null);
     state.profiles.forEach(function (p) { var n = normName(p.name); if (n && n !== 'unnamed scholar') existing[n] = true; });
     var added = 0, warned = 0, dupes = 0;
@@ -130,39 +281,46 @@
         var key = normName(prof.name);
         if (key && key !== 'unnamed scholar' && existing[key]) { dupes++; continue; }
         if (key && key !== 'unnamed scholar') existing[key] = true;
-        state.profiles.push(prof);
+        addProfileToState(prof);
         await persist(prof);
         added++;
       } catch (e) { toast('Failed: ' + f.name + ' — ' + e.message, true); }
     }
     renderRoster(); updateCount();
-    if (added) toast('Added ' + added + ' scholar' + (added === 1 ? '' : 's') +
+    if (added) toast('Added ' + added + ' scholar' + (added === 1 ? '' : 's') + ' to “' + esc(currentProject() ? currentProject().name : '') + '”' +
       (warned ? ' (' + warned + ' with parse warnings)' : '') + (dupes ? '; skipped ' + dupes + ' already in roster' : ''));
-    else if (dupes) toast('All ' + dupes + ' already in your roster (matched by name).', true);
+    else if (dupes) toast('All ' + dupes + ' already in this project (matched by name).', true);
   }
 
   function addFromText() {
     var txt = $('pasteCv').value.trim();
     if (txt.length < 40) { toast('Paste a longer CV.', true); return; }
+    if (blockedBySampleProject()) return;
     var prof = SPF.extract.buildProfile(txt, { filename: '' });
-    state.profiles.push(prof); persist(prof);
+    addProfileToState(prof); persist(prof);
     $('pasteCv').value = '';
     renderRoster(); updateCount(); toast('Added ' + prof.name);
     openScholar(prof);
   }
 
+  // Load the bundled demo scholars into their own sample project, creating and
+  // switching to it so demo data never lands in a real roster.
   function loadSamples() {
     if (!SPF.samples) { toast('Sample data unavailable.', true); return; }
-    var existing = {}; state.profiles.forEach(function (p) { existing[p.name] = true; });
+    var demo = findSampleProject() || createProject(SAMPLE_PROJECT_NAME, { isSample: true });
+    if (state.activeProjectId !== demo.id) switchProject(demo.id);
+    var existing = {}; state.profiles.forEach(function (p) { existing[normName(p.name)] = true; });
     var n = 0;
     SPF.samples.scholars.forEach(function (s) {
       var prof = SPF.extract.buildProfile(s.text, { filename: s.filename });
-      if (existing[prof.name]) return;
-      state.profiles.push(prof); persist(prof); n++;
+      prof.sample = true;
+      if (existing[normName(prof.name)]) return;
+      addProfileToState(prof, demo.id); persist(prof); n++;
     });
     renderRoster(); updateCount();
     if (!$('rfpText').value.trim()) $('rfpText').value = SPF.samples.rfp;
-    toast('Loaded ' + n + ' sample scholars and a sample RFP');
+    setView('roster');
+    toast(n ? ('Loaded ' + n + ' sample scholars into the demo project') : 'Demo project already loaded');
   }
 
   // ---------- scholar edit modal ----------
@@ -718,14 +876,22 @@
   }
 
   // ---------- export / import roster ----------
+  // Export only the active project's roster, so a shared file carries one
+  // project's scholars and cannot smuggle in another's.
   function exportRoster() {
-    SPF.store.exportAll().then(function (data) {
-      data.profiles = state.profiles; // ensure current in-memory state
-      var blob = new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' });
-      var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'scholar-roster.json'; a.click();
-      setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
-    });
+    var proj = currentProject();
+    var data = {
+      version: 2, exportedAt: Date.now(),
+      projectName: proj ? proj.name : 'roster',
+      profiles: state.profiles.map(function (p) { return Object.assign({}, p, { projectId: undefined }); })
+    };
+    var blob = new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' });
+    var safe = (proj ? proj.name : 'roster').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'roster';
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'scholar-roster-' + safe + '.json'; a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
   }
+  // Import always lands in a new project, so imported scholars never merge into
+  // an existing roster by surprise.
   function importRoster(file) {
     var r = new FileReader();
     r.onload = function () {
@@ -733,9 +899,20 @@
         var data = JSON.parse(r.result);
         var arr = data.profiles || data;
         if (!Array.isArray(arr)) throw new Error('No profiles in file.');
-        var byId = {}; state.profiles.forEach(function (p) { byId[p.id] = true; });
-        var n = 0; arr.forEach(function (p) { if (p && p.id && !byId[p.id]) { state.profiles.push(p); persist(p); n++; } });
-        renderRoster(); updateCount(); toast('Imported ' + n + ' scholars');
+        var base = (data.projectName || file.name.replace(/\.json$/i, '') || 'Imported roster');
+        var proj = createProject('Imported: ' + base);
+        switchProject(proj.id);
+        var seen = {}; var n = 0;
+        arr.forEach(function (p) {
+          if (!p) return;
+          var nk = normName(p.name);
+          if (nk && nk !== 'unnamed scholar' && seen[nk]) return;
+          seen[nk] = true;
+          p.id = p.id || ('s_' + Math.random().toString(36).slice(2, 10));
+          addProfileToState(p, proj.id); persist(p); n++;
+        });
+        renderProjectSelect(); renderRoster(); updateCount();
+        toast('Imported ' + n + ' scholars into “' + proj.name + '”');
       } catch (e) { toast('Import failed: ' + e.message, true); }
     };
     r.readAsText(file);
@@ -763,9 +940,21 @@
     $('importInput').onchange = function (e) { if (e.target.files[0]) importRoster(e.target.files[0]); e.target.value = ''; };
     $('clearRosterBtn').onclick = function () {
       if (!state.profiles.length) return;
-      if (!confirm('Remove all ' + state.profiles.length + ' scholars from this device?')) return;
-      state.profiles = []; if (SPF.store.available) SPF.store.clearProfiles(); renderRoster(); updateCount(); toast('Roster cleared');
+      var proj = currentProject();
+      if (!confirm('Remove all ' + state.profiles.length + ' scholars from “' + (proj ? proj.name : 'this project') + '”? Other projects are not affected.')) return;
+      var ids = {}; state.profiles.forEach(function (p) { ids[p.id] = true; });
+      state._all = state._all.filter(function (p) { return !ids[p.id]; });
+      state.profiles = [];
+      if (SPF.store && SPF.store.available && proj) SPF.store.deleteProjectProfiles(proj.id);
+      renderRoster(); updateCount(); toast('Roster cleared for this project');
     };
+
+    // projects
+    if ($('projectSelect')) $('projectSelect').onchange = function () { switchProject($('projectSelect').value); };
+    if ($('newProjectBtn')) $('newProjectBtn').onclick = newProjectPrompt;
+    if ($('renameProjectBtn')) $('renameProjectBtn').onclick = renameActiveProject;
+    if ($('deleteProjectBtn')) $('deleteProjectBtn').onclick = deleteActiveProject;
+    if ($('newProjectBtn2')) $('newProjectBtn2').onclick = newProjectPrompt;
 
     // roster search
     var rs = $('rosterSearch');
@@ -803,18 +992,40 @@
   }
 
   // ---------- init ----------
+  function bootstrapProjects(activeId) {
+    if (!state.projects.length) {
+      // First run, or data from before projects existed: create a default
+      // project and adopt any pre-existing profiles into it so nothing is lost.
+      var def = createProject('My first project');
+      state._all.forEach(function (p) { if (p.projectId == null) { p.projectId = def.id; if (SPF.store && SPF.store.available) SPF.store.putProfile(p); } });
+      activeId = def.id;
+    } else {
+      var home = state.projects.filter(function (p) { return !p.isSample; })[0] || state.projects[0];
+      state._all.forEach(function (p) { if (p.projectId == null) { p.projectId = home.id; if (SPF.store && SPF.store.available) SPF.store.putProfile(p); } });
+      if (!activeId || !state.projects.some(function (p) { return p.id === activeId; })) activeId = home.id;
+    }
+    state.activeProjectId = activeId;
+    if (SPF.store && SPF.store.available) SPF.store.setSetting('activeProject', activeId);
+    refreshActiveProfiles();
+  }
+  function finishInit() { renderProjectSelect(); renderRoster(); updateCount(); renderProjectsPanel(); }
+
   function init() {
     wire();
     if (SPF.store && SPF.store.available) {
       loadSettings();
-      SPF.store.getProfiles().then(function (arr) {
-        state.profiles = arr || [];
-        renderRoster(); updateCount();
-      }).catch(function () { renderRoster(); updateCount(); });
+      Promise.all([SPF.store.getProjects(), SPF.store.getProfiles(), SPF.store.getSetting('activeProject', null)])
+        .then(function (res) {
+          state.projects = res[0] || [];
+          state._all = res[1] || [];
+          bootstrapProjects(res[2]);
+          finishInit();
+        }).catch(function () { bootstrapProjects(null); finishInit(); });
     } else {
       applyTheme('system');
-      renderRoster(); updateCount();
-      toast('Local storage is unavailable; your roster will not persist between sessions.', true);
+      bootstrapProjects(null);
+      finishInit();
+      toast('Local storage is unavailable; your projects will not persist between sessions.', true);
     }
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();

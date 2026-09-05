@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Scholar Partner Finder</title>
-  <meta name="description" content="Find complementary research collaborators and build RFP-ready teams from scholars' CVs. Local, private, self-contained." />
+  <meta name="description" content="Explore research complementarities and assemble RFP-ready teams from scholars' CVs. Local, private, self-contained." />
   <meta name="theme-color" content="#0f766e" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
@@ -25,6 +25,10 @@
       <button data-view="settings">Settings</button>
     </nav>
     <div class="spacer"></div>
+    <div class="project-ctl">
+      <select id="projectSelect" title="Active project" aria-label="Active project"></select>
+      <button class="icon-btn" id="newProjectBtn" title="Create a new project">+ New</button>
+    </div>
     <span class="roster-count" id="rosterCount">0 scholars</span>
     <button class="icon-btn" id="themeToggle" title="Toggle light/dark">◐</button>
   </header>
@@ -138,6 +142,16 @@
 
     <!-- ============ SETTINGS ============ -->
     <section class="view" id="view-settings">
+      <div class="card pad" style="margin-bottom:16px">
+        <div class="section-title"><h2>Projects</h2><span class="sub">Each project keeps its own roster, isolated from the others.</span></div>
+        <p class="hint" style="margin-top:-6px">Uploaded CVs belong to the project shown in the top bar. The bundled demo data lives in its own sample project and never mixes with your real work. Switch or create projects from the top bar or here.</p>
+        <div id="projectsList" class="proj-list"></div>
+        <div class="btn-row" style="margin-top:12px">
+          <button class="btn small" id="newProjectBtn2">New project</button>
+          <button class="btn secondary small" id="renameProjectBtn">Rename current</button>
+          <button class="btn danger small" id="deleteProjectBtn">Delete current</button>
+        </div>
+      </div>
       <div class="grid two">
         <div class="card pad">
           <div class="section-title"><h2>Optional AI layer</h2><span class="badge amber" id="llmBadge">Off</span></div>
@@ -170,12 +184,17 @@
           <div class="btn-row"><button class="btn secondary small" id="themeToggle2">Toggle light / dark</button></div>
           <div class="divider"></div>
           <h3 class="small" style="margin-bottom:4px">About</h3>
-          <p class="hint">Scholar Partner Finder is a self-contained progressive web app. All CV parsing and analysis run locally in your browser; nothing is uploaded unless you explicitly enable the optional AI layer. Built as an installable PWA: use your browser's Install option to add it to your machine and run it offline.</p>
+          <p class="hint">Scholar Partner Finder is a self-contained progressive web app. All CV parsing and analysis run locally in your browser; nothing is uploaded unless you explicitly enable the optional AI layer. Work is organized into projects, each with its own isolated roster, and the bundled demo data lives in its own sample project. Install it from your browser to run it offline. Its outputs are aids to human judgment, not advice or decisions; see the credit and disclaimer at the foot of the page.</p>
         </div>
       </div>
     </section>
 
   </main>
+
+  <footer class="appfoot">
+    <p class="credit">Conceptualized and developed by <a href="https://www.linkedin.com/in/beingbabu/" target="_blank" rel="noopener noreferrer">Professor Babu George</a>.</p>
+    <p class="disclaimer">Provided as is, without warranties of any kind, express or implied. All outputs are heuristic aids intended to support human judgment, not professional, legal, financial, or employment advice, and not decisions or recommendations. Any reliance is at your own risk; the author accepts no responsibility or liability for any decision, action, outcome, or damages arising from use of this tool. Verify all results independently before relying on them.</p>
+  </footer>
 </div>
 
 <!-- modal -->
