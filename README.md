@@ -131,9 +131,12 @@ All CV text, extracted profiles, projects, and rosters are stored locally in the
 browser's IndexedDB. Nothing is transmitted anywhere by default. A roster export
 covers only the active project and strips any stored API key, and an import
 always lands in a new project rather than merging into an existing one. The
-optional AI layer is off until you enable it, requires your own API key, and
-sends data only to the provider endpoint you select; sending CV text for
-enhanced extraction requires a second, explicit consent checkbox.
+optional AI layer is off until you enable it and sends data only to the provider
+endpoint you select. It supports several providers, including ones with a free
+tier (Google Gemini, Groq, OpenRouter), the Anthropic and OpenAI APIs, xAI Grok,
+any OpenAI-compatible endpoint, and a local model served by Ollama, which needs
+no key and keeps everything on your machine. Sending CV text for enhanced
+extraction requires a second, explicit consent checkbox.
 
 ## File formats
 

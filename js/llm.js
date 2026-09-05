@@ -21,12 +21,71 @@
 
   var DEFAULT = {
     enabled: false,
-    provider: 'anthropic',        // 'anthropic' | 'openai'
+    provider: 'anthropic',        // key of PROVIDERS below
     apiKey: '',
-    model: 'claude-3-5-haiku-latest',
-    baseUrl: '',                  // for openai-compatible custom endpoints
+    model: '',                    // blank means "use the provider's default"
+    baseUrl: '',                  // override for openai-compatible / local endpoints
     allowCvText: false            // extra explicit consent to send CV text
   };
+
+  /*
+   * Provider registry. Three request styles are supported:
+   *   - 'anthropic': the Anthropic Messages API.
+   *   - 'openai':    any OpenAI-compatible /chat/completions endpoint. Most
+   *                  providers below (OpenAI, xAI Grok, Groq, OpenRouter, a
+   *                  local Ollama server, and custom gateways) share this shape,
+   *                  differing only in base URL, default model, and whether a
+   *                  key is required.
+   *   - 'gemini':    Google's Generative Language generateContent endpoint.
+   *
+   * `keyless` marks a provider (Ollama) that needs no API key. `editableBase`
+   * controls whether the Settings UI exposes a Base URL field. `hint` is shown
+   * under the provider picker. Model names drift over time, so each is only a
+   * sensible default the user can override.
+   */
+  var PROVIDERS = {
+    anthropic: {
+      label: 'Anthropic (Claude)', style: 'anthropic', baseUrl: 'https://api.anthropic.com/v1',
+      model: 'claude-3-5-haiku-latest', keyless: false, editableBase: false,
+      hint: 'Key from console.anthropic.com. Browser access uses Anthropic’s direct-access header.'
+    },
+    gemini: {
+      label: 'Google Gemini (free tier)', style: 'gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+      model: 'gemini-1.5-flash', keyless: false, editableBase: false,
+      hint: 'Free tier: create a key at aistudio.google.com/apikey. Works directly from the browser.'
+    },
+    groq: {
+      label: 'Groq (free tier, fast)', style: 'openai', baseUrl: 'https://api.groq.com/openai/v1',
+      model: 'llama-3.1-8b-instant', keyless: false, editableBase: false,
+      hint: 'Free API key at console.groq.com/keys. Fast, OpenAI-compatible. Browsers with CORS restrictions may need a proxy.'
+    },
+    openrouter: {
+      label: 'OpenRouter (free models)', style: 'openai', baseUrl: 'https://openrouter.ai/api/v1',
+      model: 'meta-llama/llama-3.1-8b-instruct:free', keyless: false, editableBase: false,
+      hint: 'Key at openrouter.ai/keys. Many free models (slugs ending in :free) are listed at openrouter.ai/models.'
+    },
+    grok: {
+      label: 'xAI (Grok)', style: 'openai', baseUrl: 'https://api.x.ai/v1',
+      model: 'grok-2-latest', keyless: false, editableBase: false,
+      hint: 'Key from console.x.ai. OpenAI-compatible endpoint.'
+    },
+    openai: {
+      label: 'OpenAI', style: 'openai', baseUrl: 'https://api.openai.com/v1',
+      model: 'gpt-4o-mini', keyless: false, editableBase: true,
+      hint: 'Key from platform.openai.com. Direct browser calls can be blocked by CORS; a gateway or proxy may be needed.'
+    },
+    ollama: {
+      label: 'Ollama (local, no key)', style: 'openai', baseUrl: 'http://localhost:11434/v1',
+      model: 'llama3.1', keyless: true, editableBase: true,
+      hint: 'Runs on your machine, no key needed. Start Ollama with OLLAMA_ORIGINS="*" so the browser may call it. A page served over https (e.g. GitHub Pages) cannot reach http://localhost — open a local copy over http for Ollama.'
+    },
+    custom: {
+      label: 'OpenAI-compatible (custom)', style: 'openai', baseUrl: 'https://api.openai.com/v1',
+      model: '', keyless: false, editableBase: true,
+      hint: 'Any OpenAI-compatible endpoint (Azure, LM Studio, a gateway). Set the Base URL and model.'
+    }
+  };
+  function providerOf(id) { return PROVIDERS[id] || PROVIDERS.openai; }
 
   var cache = null;
 
@@ -44,7 +103,10 @@
     return SPF.store ? SPF.store.setSetting('llm', cache) : Promise.resolve(cache);
   }
 
-  function isEnabled() { return !!(cache && cache.enabled && cache.apiKey); }
+  function isEnabled() {
+    if (!cache || !cache.enabled) return false;
+    return !!(cache.apiKey || providerOf(cache.provider).keyless);
+  }
 
   function extractJson(text) {
     if (!text) return null;
@@ -60,37 +122,67 @@
     return null;
   }
 
-  // Low-level completion. Returns plain text. Throws on failure.
+  // Low-level completion. Returns plain text. Throws on failure. Routes by the
+  // selected provider's request style.
   function complete(prompt, opts) {
     opts = opts || {};
     return getConfig().then(function (cfg) {
-      if (!cfg.apiKey) throw new Error('No API key configured.');
-      if (cfg.provider === 'openai') {
-        var base = cfg.baseUrl && cfg.baseUrl.trim() ? cfg.baseUrl.replace(/\/+$/, '') : 'https://api.openai.com/v1';
-        return fetch(base + '/chat/completions', {
+      var prov = providerOf(cfg.provider);
+      var key = (cfg.apiKey || '').trim();
+      if (!prov.keyless && !key) throw new Error('No API key configured.');
+      var model = (cfg.model || '').trim() || prov.model;
+      if (!model) throw new Error('No model set for this provider.');
+      var system = opts.system || 'You are a careful research-development analyst.';
+      var maxTokens = opts.maxTokens || 1024;
+      var temperature = opts.temperature != null ? opts.temperature : 0.4;
+      var base = (cfg.baseUrl && cfg.baseUrl.trim() ? cfg.baseUrl.trim() : prov.baseUrl).replace(/\/+$/, '');
+
+      if (prov.style === 'anthropic') {
+        return fetch(base + '/messages', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + cfg.apiKey },
-          body: JSON.stringify({
-            model: cfg.model, max_tokens: opts.maxTokens || 1024, temperature: opts.temperature != null ? opts.temperature : 0.4,
-            messages: [{ role: 'system', content: opts.system || 'You are a careful research-development analyst.' }, { role: 'user', content: prompt }]
-          })
-        }).then(handle).then(function (j) { return j.choices[0].message.content; });
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': key,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true'
+          },
+          body: JSON.stringify({ model: model, max_tokens: maxTokens, system: system, messages: [{ role: 'user', content: prompt }] })
+        }).then(handle).then(function (j) { return (j.content || []).map(function (b) { return b.text || ''; }).join(''); });
       }
-      // Default: Anthropic Messages API.
-      return fetch('https://api.anthropic.com/v1/messages', {
+
+      if (prov.style === 'gemini') {
+        var url = base + '/models/' + encodeURIComponent(model) + ':generateContent?key=' + encodeURIComponent(key);
+        return fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: system }] },
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: { maxOutputTokens: maxTokens, temperature: temperature }
+          })
+        }).then(handle).then(function (j) {
+          var c = (j.candidates || [])[0];
+          var parts = (c && c.content && c.content.parts) || [];
+          return parts.map(function (p) { return p.text || ''; }).join('');
+        });
+      }
+
+      // Default: OpenAI-compatible /chat/completions (OpenAI, Grok, Groq,
+      // OpenRouter, Ollama, custom gateways).
+      var headers = { 'Content-Type': 'application/json' };
+      if (key) headers['Authorization'] = 'Bearer ' + key;
+      if (cfg.provider === 'openrouter') { headers['HTTP-Referer'] = 'https://scholar-partner-finder.app'; headers['X-Title'] = 'Scholar Partner Finder'; }
+      return fetch(base + '/chat/completions', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': cfg.apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true'
-        },
+        headers: headers,
         body: JSON.stringify({
-          model: cfg.model, max_tokens: opts.maxTokens || 1024,
-          system: opts.system || 'You are a careful research-development analyst.',
-          messages: [{ role: 'user', content: prompt }]
+          model: model, max_tokens: maxTokens, temperature: temperature,
+          messages: [{ role: 'system', content: system }, { role: 'user', content: prompt }]
         })
-      }).then(handle).then(function (j) { return (j.content || []).map(function (b) { return b.text || ''; }).join(''); });
+      }).then(handle).then(function (j) {
+        var ch = (j.choices || [])[0];
+        return (ch && ch.message && ch.message.content) || '';
+      });
     });
   }
 
@@ -155,6 +247,8 @@
 
   SPF.llm = {
     DEFAULT: DEFAULT,
+    PROVIDERS: PROVIDERS,
+    providerOf: providerOf,
     getConfig: getConfig,
     setConfig: setConfig,
     isEnabled: isEnabled,

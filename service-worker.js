@@ -12,7 +12,7 @@
  * this file then change, the browser detects the new worker, installs it, and
  * (via skipWaiting + clients.claim) takes control promptly.
  */
-var CACHE = 'spf-v4';
+var CACHE = 'spf-v5';
 var SHELL = [
   './',
   './index.html',

@@ -900,26 +900,54 @@
   }
 
   // ---------- settings / LLM ----------
+  // Fill the provider picker from the LLM module's registry (single source of
+  // truth, so adding a provider there needs no change here).
+  function populateProviders() {
+    var sel = $('llmProvider'); if (!sel || !SPF.llm || !SPF.llm.PROVIDERS) return;
+    sel.innerHTML = Object.keys(SPF.llm.PROVIDERS).map(function (id) {
+      return '<option value="' + id + '">' + esc(SPF.llm.PROVIDERS[id].label) + '</option>';
+    }).join('');
+  }
+  // Reflect the selected provider: base-URL field, placeholders, hint, key note.
+  function syncProviderUi() {
+    var id = $('llmProvider') ? $('llmProvider').value : 'anthropic';
+    var prov = (SPF.llm && SPF.llm.providerOf) ? SPF.llm.providerOf(id) : null;
+    if (!prov) return;
+    if ($('baseUrlField')) $('baseUrlField').hidden = !prov.editableBase;
+    if ($('llmBaseUrl')) $('llmBaseUrl').placeholder = prov.baseUrl || 'https://…';
+    if ($('llmModel')) $('llmModel').placeholder = prov.model || 'model name';
+    if ($('llmProviderHint')) $('llmProviderHint').textContent = prov.hint || '';
+    if ($('llmKeyNote')) $('llmKeyNote').textContent = prov.keyless ? 'No key required for this provider.' : '';
+    if ($('llmKey')) $('llmKey').placeholder = prov.keyless ? 'Not required' : 'Paste your API key';
+  }
   function loadSettings() {
     SPF.store.getSetting('theme', 'system').then(applyTheme);
     SPF.store.getSetting('pdfEnhanced', false).then(function (v) { $('pdfEnhanced').checked = !!v; if (v) enablePdfJs(); });
+    populateProviders();
     SPF.llm.getConfig().then(function (cfg) {
+      if (!SPF.llm.PROVIDERS[cfg.provider]) cfg.provider = 'anthropic';
       $('llmProvider').value = cfg.provider; $('llmKey').value = cfg.apiKey || ''; $('llmModel').value = cfg.model || '';
       $('llmBaseUrl').value = cfg.baseUrl || ''; $('llmEnabled').checked = !!cfg.enabled; $('llmAllowCv').checked = !!cfg.allowCvText;
-      $('baseUrlField').hidden = cfg.provider !== 'openai';
+      syncProviderUi();
       updateLlmBadge();
     });
   }
   function updateLlmBadge() {
     SPF.llm.getConfig().then(function (cfg) {
-      var on = cfg.enabled && cfg.apiKey;
+      var on = cfg.enabled && (cfg.apiKey || SPF.llm.providerOf(cfg.provider).keyless);
       var b = $('llmBadge'); b.textContent = on ? 'On' : 'Off'; b.className = 'badge ' + (on ? 'green' : 'amber');
     });
   }
   function saveLlm() {
+    var id = $('llmProvider').value;
+    var prov = SPF.llm.providerOf(id);
     var cfg = {
-      provider: $('llmProvider').value, apiKey: $('llmKey').value.trim(), model: $('llmModel').value.trim() || (($('llmProvider').value === 'openai') ? 'gpt-4o-mini' : 'claude-3-5-haiku-latest'),
-      baseUrl: $('llmBaseUrl').value.trim(), enabled: $('llmEnabled').checked, allowCvText: $('llmAllowCv').checked
+      provider: id,
+      apiKey: $('llmKey').value.trim(),
+      model: $('llmModel').value.trim() || prov.model,
+      baseUrl: $('llmBaseUrl').value.trim(),
+      enabled: $('llmEnabled').checked,
+      allowCvText: $('llmAllowCv').checked
     };
     SPF.llm.setConfig(cfg).then(function () { updateLlmBadge(); toast('AI settings saved'); });
   }
@@ -1063,7 +1091,8 @@
     $('buildTeamBtn').onclick = buildComplementaryTeam;
 
     // settings
-    $('llmProvider').onchange = function () { $('baseUrlField').hidden = $('llmProvider').value !== 'openai'; };
+    populateProviders();
+    $('llmProvider').onchange = function () { $('llmBaseUrl').value = ''; syncProviderUi(); };
     $('llmSaveBtn').onclick = saveLlm;
     $('llmTestBtn').onclick = testLlm;
     $('pdfEnhanced').onchange = function () {

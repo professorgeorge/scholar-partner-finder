@@ -151,16 +151,14 @@
       <div class="grid two">
         <div class="card pad">
           <div class="section-title"><h2>Optional AI layer</h2><span class="badge amber" id="llmBadge">Off</span></div>
-          <p class="hint" style="margin-top:-6px">The app works fully without this. When enabled, it can improve tag extraction and write richer collaboration proposals using <em>your own</em> API key. Your key is stored only in this browser and is sent only to the provider you choose.</p>
+          <p class="hint" style="margin-top:-6px">The app works fully without this. When enabled, it can improve tag extraction and write richer collaboration proposals. Several providers offer a free tier (Google Gemini, Groq, OpenRouter), and you can run a model locally with Ollama and no key at all. Your key is stored only in this browser and is sent only to the provider you choose.</p>
           <label class="field"><span>Provider</span>
-            <select id="llmProvider">
-              <option value="anthropic">Anthropic (Claude)</option>
-              <option value="openai">OpenAI-compatible</option>
-            </select>
+            <select id="llmProvider" aria-describedby="llmProviderHint"></select>
           </label>
-          <label class="field"><span>API key</span><input type="password" id="llmKey" placeholder="Paste your API key" autocomplete="off"></label>
-          <label class="field"><span>Model</span><input type="text" id="llmModel" placeholder="e.g. claude-3-5-haiku-latest"></label>
-          <label class="field" id="baseUrlField" hidden><span>Base URL (OpenAI-compatible)</span><input type="text" id="llmBaseUrl" placeholder="https://api.openai.com/v1"></label>
+          <p class="hint" id="llmProviderHint" style="margin-top:-6px;margin-bottom:10px"></p>
+          <label class="field"><span>API key</span><input type="password" id="llmKey" placeholder="Paste your API key" autocomplete="off"><span class="hint" id="llmKeyNote"></span></label>
+          <label class="field"><span>Model</span><input type="text" id="llmModel" placeholder="model name"></label>
+          <label class="field" id="baseUrlField" hidden><span>Base URL</span><input type="text" id="llmBaseUrl" placeholder="https://api.openai.com/v1"></label>
           <label class="small" style="display:flex;gap:8px;align-items:flex-start;margin-bottom:10px"><input type="checkbox" id="llmEnabled" style="width:auto;margin-top:3px"><span>Enable the AI layer</span></label>
           <label class="small" style="display:flex;gap:8px;align-items:flex-start;margin-bottom:12px"><input type="checkbox" id="llmAllowCv" style="width:auto;margin-top:3px"><span>Allow sending CV text for enhanced extraction (transmits CV content to your provider)</span></label>
           <div class="btn-row">
