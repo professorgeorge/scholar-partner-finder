@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Scholar Partner Finder</title>
+  <meta name="description" content="Find complementary research collaborators and build RFP-ready teams from scholars' CVs. Local, private, self-contained." />
+  <meta name="theme-color" content="#0f766e" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">SP</div>
+      <div>Scholar Partner Finder<small>Complementarity &amp; RFP team-building &middot; runs entirely on your device</small></div>
+    </div>
+    <nav class="nav" id="nav">
+      <button data-view="rfp" class="active">RFP Talent Search</button>
+      <button data-view="roster">Roster</button>
+      <button data-view="team">Team Explorer</button>
+      <button data-view="settings">Settings</button>
+    </nav>
+    <div class="spacer"></div>
+    <span class="roster-count" id="rosterCount">0 scholars</span>
+    <button class="icon-btn" id="themeToggle" title="Toggle light/dark">◐</button>
+  </header>
+
+  <main class="main">
+
+    <!-- ============ RFP SEARCH (primary) ============ -->
+    <section class="view active" id="view-rfp">
+      <div class="grid side">
+        <div class="card pad">
+          <div class="section-title"><h2>Opportunity</h2></div>
+          <p class="hint" style="margin-top:-8px">Paste an RFP, solicitation, or a short research topic. The tool reads it as a set of requirements and ranks your roster against it.</p>
+          <label class="field">
+            <span>RFP / solicitation / topic</span>
+            <textarea id="rfpText" placeholder="Paste the funding opportunity text or describe the research topic..."></textarea>
+          </label>
+          <div class="btn-row" style="margin-bottom:12px">
+            <button class="btn secondary small" id="rfpUploadBtn">Upload RFP file</button>
+            <button class="btn ghost small" id="rfpSampleBtn">Use sample RFP</button>
+          </div>
+          <div class="divider"></div>
+          <label class="field">
+            <span>Ranking emphasis</span>
+            <div class="range"><span class="small" style="width:110px">Topic relevance</span><input type="range" id="wRelevance" min="0" max="100" value="70"><span class="val" id="wRelevanceV">70</span></div>
+            <div class="range"><span class="small" style="width:110px">Recent activity</span><input type="range" id="wRecent" min="0" max="100" value="20"><span class="val" id="wRecentV">20</span></div>
+            <div class="range"><span class="small" style="width:110px">Funding record</span><input type="range" id="wFunding" min="0" max="100" value="10"><span class="val" id="wFundingV">10</span></div>
+          </label>
+          <label class="field">
+            <span>Team size</span>
+            <div class="range"><input type="range" id="teamSize" min="2" max="6" value="4"><span class="val" id="teamSizeV">4</span></div>
+          </label>
+          <button class="btn" id="analyzeBtn" style="width:100%">Analyze &amp; build team</button>
+          <p class="hint" style="margin-top:10px" id="rfpRosterHint"></p>
+        </div>
+
+        <div id="rfpResults">
+          <div class="empty card pad">
+            <div class="big">🎯</div>
+            <p><strong>Rank your scholars against an opportunity.</strong><br>Add CVs to your roster, paste an RFP, and get an explainable shortlist, a coverage-maximising team, capacity gaps, and collaboration topics.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ ROSTER ============ -->
+    <section class="view" id="view-roster">
+      <div class="grid side">
+        <div class="card pad">
+          <div class="section-title"><h2>Add scholars</h2></div>
+          <div class="dropzone" id="dropzone">
+            <p style="margin:.2em 0"><strong>Drop CV files here</strong></p>
+            <p class="hint">PDF, Word (.docx), text, Markdown, RTF, HTML</p>
+            <div class="btn-row" style="justify-content:center;margin-top:10px">
+              <button class="btn small" id="pickFilesBtn">Choose files</button>
+              <button class="btn secondary small" id="pickFolderBtn">Choose folder</button>
+            </div>
+          </div>
+          <input type="file" id="fileInput" multiple accept=".pdf,.docx,.doc,.txt,.md,.rtf,.html,.htm" hidden />
+          <input type="file" id="folderInput" webkitdirectory directory multiple hidden />
+          <div class="divider"></div>
+          <label class="field">
+            <span>Or paste one CV as text</span>
+            <textarea id="pasteCv" placeholder="Paste a single scholar's CV text..."></textarea>
+          </label>
+          <div class="btn-row">
+            <button class="btn small" id="addPasteBtn">Add from text</button>
+            <button class="btn ghost small" id="loadSamplesBtn">Load 8 sample scholars</button>
+          </div>
+          <div class="divider"></div>
+          <div class="btn-row">
+            <button class="btn secondary small" id="exportRosterBtn">Export roster (JSON)</button>
+            <button class="btn secondary small" id="importRosterBtn">Import</button>
+            <button class="btn danger small" id="clearRosterBtn">Clear all</button>
+          </div>
+          <input type="file" id="importInput" accept=".json" hidden />
+        </div>
+
+        <div class="card">
+          <div class="section-title" style="padding:16px 18px 0"><h2>Roster</h2><span class="sub" id="rosterSub"></span></div>
+          <div id="rosterList"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ TEAM EXPLORER ============ -->
+    <section class="view" id="view-team">
+      <div class="section-title"><h2>Team Explorer</h2><span class="sub">Discover complementarity across your roster, independent of any single RFP.</span></div>
+      <div class="grid two">
+        <div class="card pad">
+          <h3>Most complementary pairs</h3>
+          <p class="hint" style="margin-top:-6px">Pairs whose strengths interlock: broad combined coverage, with enough common ground to actually collaborate.</p>
+          <div id="pairsList"><p class="faint small">Add scholars to see complementary pairs.</p></div>
+        </div>
+        <div class="card pad">
+          <h3>Bridge scholars (connectors)</h3>
+          <p class="hint" style="margin-top:-6px">People whose expertise links many others at a workable distance. Natural coordinators and lead PIs.</p>
+          <div id="bridgesList"><p class="faint small">Add scholars to see connectors.</p></div>
+        </div>
+      </div>
+      <div class="card pad" style="margin-top:16px">
+        <h3>Build a complementary team</h3>
+        <div class="btn-row">
+          <label class="small">Seed<select id="teamSeed" style="width:auto;min-width:180px;margin-left:6px"></select></label>
+          <label class="small">Size<input type="number" id="teamModeSize" min="2" max="6" value="3" style="width:64px;margin-left:6px"></label>
+          <button class="btn small" id="buildTeamBtn">Build team</button>
+        </div>
+        <div id="teamModeResult" style="margin-top:14px"></div>
+      </div>
+    </section>
+
+    <!-- ============ SETTINGS ============ -->
+    <section class="view" id="view-settings">
+      <div class="grid two">
+        <div class="card pad">
+          <div class="section-title"><h2>Optional AI layer</h2><span class="badge amber" id="llmBadge">Off</span></div>
+          <p class="hint" style="margin-top:-6px">The app works fully without this. When enabled, it can improve tag extraction and write richer collaboration proposals using <em>your own</em> API key. Your key is stored only in this browser and is sent only to the provider you choose.</p>
+          <label class="field"><span>Provider</span>
+            <select id="llmProvider">
+              <option value="anthropic">Anthropic (Claude)</option>
+              <option value="openai">OpenAI-compatible</option>
+            </select>
+          </label>
+          <label class="field"><span>API key</span><input type="password" id="llmKey" placeholder="Paste your API key" autocomplete="off"></label>
+          <label class="field"><span>Model</span><input type="text" id="llmModel" placeholder="e.g. claude-3-5-haiku-latest"></label>
+          <label class="field" id="baseUrlField" hidden><span>Base URL (OpenAI-compatible)</span><input type="text" id="llmBaseUrl" placeholder="https://api.openai.com/v1"></label>
+          <label class="small" style="display:flex;gap:8px;align-items:flex-start;margin-bottom:10px"><input type="checkbox" id="llmEnabled" style="width:auto;margin-top:3px"><span>Enable the AI layer</span></label>
+          <label class="small" style="display:flex;gap:8px;align-items:flex-start;margin-bottom:12px"><input type="checkbox" id="llmAllowCv" style="width:auto;margin-top:3px"><span>Allow sending CV text for enhanced extraction (transmits CV content to your provider)</span></label>
+          <div class="btn-row">
+            <button class="btn small" id="llmSaveBtn">Save</button>
+            <button class="btn secondary small" id="llmTestBtn">Test connection</button>
+          </div>
+          <p class="hint" id="llmStatus" style="margin-top:10px"></p>
+        </div>
+
+        <div class="card pad">
+          <div class="section-title"><h2>PDF &amp; data</h2></div>
+          <h3 class="small" style="margin-bottom:4px">PDF text extraction</h3>
+          <p class="hint">Built-in extraction works offline for most digital PDFs. Scanned or unusual PDFs may extract poorly; for those, paste the text or enable enhanced parsing (loads pdf.js from a CDN, so it needs a network connection).</p>
+          <label class="small" style="display:flex;gap:8px;align-items:flex-start;margin:8px 0 16px"><input type="checkbox" id="pdfEnhanced" style="width:auto;margin-top:3px"><span>Enable enhanced PDF parsing (pdf.js via CDN)</span></label>
+          <div class="divider"></div>
+          <h3 class="small" style="margin-bottom:4px">Appearance</h3>
+          <div class="btn-row"><button class="btn secondary small" id="themeToggle2">Toggle light / dark</button></div>
+          <div class="divider"></div>
+          <h3 class="small" style="margin-bottom:4px">About</h3>
+          <p class="hint">Scholar Partner Finder is a self-contained progressive web app. All CV parsing and analysis run locally in your browser; nothing is uploaded unless you explicitly enable the optional AI layer. Built as an installable PWA: use your browser's Install option to add it to your machine and run it offline.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- modal -->
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal">
+    <header><h3 id="modalTitle">Scholar</h3><button class="icon-btn" id="modalClose">✕</button></header>
+    <div class="body" id="modalBody"></div>
+    <footer id="modalFooter"></footer>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script src="js/lexicon.js"></script>
+<script src="js/parse.js"></script>
+<script src="js/extract.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/store.js"></script>
+<script src="js/llm.js"></script>
+<script src="js/samples-data.js"></script>
+<script src="js/app.js"></script>
+<script>
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('service-worker.js').catch(function () {});
+    });
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+Elena Petrova
+Department of Electrical and Computer Engineering, Example State University
+elena.petrova@example.edu
+
+Research Interests
+Sensor systems, the Internet of Things, and embedded systems for environmental
+monitoring. My lab designs low-power wireless sensor networks and edge devices, with
+expertise in signal processing and real-time control systems.
+
+Education
+Ph.D. in Electrical Engineering, 2014
+M.S. in Electrical Engineering, 2010
+
+Academic Appointments
+Associate Professor of Electrical and Computer Engineering, 2020 to present
+Assistant Professor, 2015 to 2020
+
+Selected Publications
+Petrova, E. (2024). Low-power IoT sensor networks for environmental monitoring. IEEE Internet of Things Journal.
+Petrova, E. (2023). Edge computing for embedded sensor systems. IEEE Transactions on Industrial Electronics.
+Petrova, E. (2022). Signal processing for wireless sensor networks. IEEE Sensors Journal.
+Petrova, E. (2021). Real-time control of distributed sensors. IEEE Transactions on Control Systems.
+
+Grants and Funding
+National Science Foundation, "Wireless Sensor Networks for Environmental Sensing,"
+$750,000, 2021 to 2024, Principal Investigator.
+Department of Defense, ONR, "Edge Sensing Systems," $450,000, 2019.
+
+Technical Skills
+Sensor networks, Internet of Things, embedded systems, signal processing,
+control systems, edge computing, wireless communication, electrical engineering.

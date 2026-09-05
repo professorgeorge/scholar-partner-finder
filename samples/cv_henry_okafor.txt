@@ -1,0 +1,29 @@
+Henry Okafor
+Department of Computer Science, Example State University
+henry.okafor@example.edu
+
+Research Interests
+Cybersecurity, privacy, and cryptography. My research addresses network security,
+trustworthy computing, and privacy-preserving data analysis, including secure
+machine learning and penetration testing of distributed systems.
+
+Education
+Ph.D. in Computer Science, 2015
+B.S. in Computer Engineering, 2010
+
+Academic Appointments
+Assistant Professor of Computer Science, 2016 to present
+
+Selected Publications
+Okafor, H. (2024). Privacy-preserving machine learning for sensitive data. IEEE Security and Privacy.
+Okafor, H. (2023). Network security for distributed systems. USENIX Security.
+Okafor, H. (2022). Cryptographic protocols for trustworthy computing. ACM CCS.
+Okafor, H. (2021). Penetration testing of IoT devices. NDSS.
+
+Grants and Funding
+National Science Foundation, "Trustworthy Computing for Critical Infrastructure,"
+$550,000, 2021 to 2024, Principal Investigator.
+
+Technical Skills
+Cybersecurity, cryptography, network security, privacy, penetration testing,
+trustworthy computing, machine learning, computer science.

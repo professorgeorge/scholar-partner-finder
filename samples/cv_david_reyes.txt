@@ -1,0 +1,32 @@
+David Reyes
+Department of Economics, Example State University
+david.reyes@example.edu
+
+Research Interests
+Applied microeconomics with an emphasis on program evaluation, policy analysis, and
+cost-benefit analysis. I use econometrics and panel data methods, including
+instrumental variables and randomized controlled trials, to evaluate the economic
+impact of infrastructure and environmental policy.
+
+Education
+Ph.D. in Economics, 2010
+B.A. in Economics, 2004
+
+Academic Appointments
+Professor of Economics, 2020 to present
+Associate Professor, 2015 to 2020
+
+Selected Publications
+Reyes, D. (2024). Cost-benefit analysis of water infrastructure investment. Journal of Public Economics.
+Reyes, D. (2023). Program evaluation of rural development policy. American Economic Review.
+Reyes, D. (2022). Econometric impact evaluation of environmental regulation. Journal of Environmental Economics.
+Reyes, D. (2021). Instrumental variables in field experiments. Econometrica.
+
+Grants and Funding
+National Science Foundation, "Economics of Infrastructure Resilience," $500,000,
+2021 to 2024, Principal Investigator.
+Sloan Foundation, "Policy Evaluation Methods," $250,000, 2019.
+
+Technical Skills
+Econometrics, program evaluation, policy analysis, cost-benefit analysis, panel data,
+instrumental variables, impact evaluation, statistical modeling, economics.

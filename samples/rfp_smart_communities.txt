@@ -1,0 +1,34 @@
+National Science Foundation
+Smart and Connected Communities (S&CC)
+Program Solicitation: AI-Enabled Water Sustainability and Climate Resilience for Underserved Communities
+
+Synopsis
+The National Science Foundation invites proposals for integrative, use-inspired research
+that improves water sustainability and climate resilience in underserved communities.
+Successful projects will pair advanced computing with environmental science and genuine
+community engagement.
+
+Areas of Interest
+Proposals should combine several of the following capabilities:
+
+- Artificial intelligence and machine learning for environmental data, including deep
+  learning and natural language processing of policy and community input.
+- Water resources, hydrology, drought, and water security, especially in arid regions.
+- Sensor networks, the Internet of Things, and embedded systems for real-time
+  environmental monitoring.
+- Geospatial analysis, remote sensing, and climate data for decision support.
+- Community-based participatory research, stakeholder engagement, and attention to
+  health equity in underserved populations.
+- Economic and policy analysis, including program evaluation and cost-benefit analysis
+  of proposed interventions.
+- Membrane desalination and water treatment technologies for reuse.
+- Integration of indigenous knowledge systems in environmental decision-making.
+
+Broader Impacts
+Projects must broaden participation and include a credible plan for community
+partnerships, workforce development, and translation of results into practice.
+
+Awards
+Anticipated total funding of $3,000,000 for approximately four awards. Interdisciplinary
+teams spanning computing, engineering, environmental science, health, and the social
+sciences are strongly encouraged.

@@ -1,0 +1,31 @@
+Farid Hassan
+Department of Statistics and Data Science, Example State University
+farid.hassan@example.edu
+
+Research Interests
+Statistical modeling and data science for the environment, including geospatial
+analysis, remote sensing, and climate data. I develop Bayesian methods and time
+series models for large environmental datasets, and I work extensively with remote
+sensing imagery and spatial statistics.
+
+Education
+Ph.D. in Statistics, 2013
+M.S. in Applied Mathematics, 2009
+
+Academic Appointments
+Associate Professor of Statistics and Data Science, 2019 to present
+Assistant Professor, 2014 to 2019
+
+Selected Publications
+Hassan, F. (2024). Bayesian spatial models for climate data. Journal of the American Statistical Association.
+Hassan, F. (2023). Remote sensing and machine learning for land cover. Remote Sensing of Environment.
+Hassan, F. (2022). Time series analysis of climate variability. Annals of Applied Statistics.
+Hassan, F. (2021). Geospatial data science for environmental monitoring. Spatial Statistics.
+
+Grants and Funding
+NASA, "Satellite Data Science for Climate," $650,000, 2021 to 2024, Principal Investigator.
+National Science Foundation, "Bayesian Methods for Environmental Data," $400,000, 2019.
+
+Technical Skills
+Statistical modeling, Bayesian methods, geospatial analysis, remote sensing,
+time series, data science, spatial statistics, climate, machine learning.

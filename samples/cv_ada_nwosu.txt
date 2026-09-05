@@ -1,0 +1,32 @@
+Ada Nwosu
+Department of Computer Science, Example State University
+ada.nwosu@example.edu
+
+Research Interests
+Machine learning, deep learning, natural language processing, and large-scale data
+analysis. My group develops foundation models and text mining methods, with an
+emphasis on high-performance computing and scalable training on GPU clusters.
+
+Education
+Ph.D. in Computer Science, 2013
+B.S. in Computer Science, 2008
+
+Academic Appointments
+Associate Professor of Computer Science, 2019 to present
+Assistant Professor of Computer Science, 2014 to 2019
+
+Selected Publications
+Nwosu, A. (2024). Scalable transformer models for scientific text mining. Journal of Machine Learning Research.
+Nwosu, A. (2023). Deep learning for multilingual natural language processing. ACL.
+Nwosu, A. (2022). Distributed training on GPU clusters for foundation models. SC22.
+Nwosu, A. (2021). Text mining of environmental policy corpora. EMNLP.
+Nwosu, A. (2019). Neural networks for time series forecasting. NeurIPS.
+
+Grants and Funding
+National Science Foundation, "Scalable Machine Learning for Scientific Discovery,"
+$1,200,000, 2022 to 2025, Principal Investigator.
+NVIDIA industry gift for GPU cluster expansion, $150,000, 2021.
+
+Technical Skills
+Python, PyTorch, distributed computing, high-performance computing, machine learning,
+natural language processing, deep learning, data science.

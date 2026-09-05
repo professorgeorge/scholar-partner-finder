@@ -1,0 +1,32 @@
+Ben Carter
+Department of Civil and Environmental Engineering, Example State University
+ben.carter@example.edu
+
+Research Interests
+Water resources engineering, hydrology, and watershed management. I study drought
+resilience and water security in arid regions, combining field data collection with
+geospatial analysis and remote sensing. Recent work integrates low-cost sensor
+networks for real-time streamflow monitoring.
+
+Education
+Ph.D. in Civil Engineering, 2011
+M.S. in Environmental Engineering, 2007
+
+Academic Appointments
+Professor of Civil and Environmental Engineering, 2021 to present
+Associate Professor, 2015 to 2021
+
+Selected Publications
+Carter, B. (2024). Sensor networks for streamflow monitoring in arid watersheds. Water Resources Research.
+Carter, B. (2023). Remote sensing of drought and water security. Journal of Hydrology.
+Carter, B. (2022). Geospatial analysis of watershed resilience. Environmental Modelling and Software.
+Carter, B. (2020). Field methods for hydrologic data collection. Hydrological Processes.
+
+Grants and Funding
+National Science Foundation, "Water Security in Arid Watersheds," $900,000,
+2021 to 2024, Principal Investigator.
+Department of Agriculture, "Drought Resilience for Rural Water Systems," $600,000, 2019.
+
+Technical Skills
+Hydrologic modeling, GIS, remote sensing, geospatial analysis, sensor networks,
+field data collection, water resources, environmental engineering.
