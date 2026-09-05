@@ -1,9 +1,18 @@
 /*
  * service-worker.js — offline app shell caching.
- * Only same-origin app files are precached. The optional pdf.js CDN request is
- * always allowed to hit the network and is never cached here.
+ *
+ * Strategy: network-first for same-origin GET requests, with the cache as an
+ * offline fallback. When you are online you always receive the freshly deployed
+ * files (so a push to GitHub Pages shows up on the next load), and when you are
+ * offline the last-seen copy is served from the cache. The optional pdf.js CDN
+ * request is cross-origin and always goes straight to the network.
+ *
+ * The cache name is versioned. Bump it whenever the shell changes so that an
+ * updated worker deletes the previous cache on activation. Because the bytes of
+ * this file then change, the browser detects the new worker, installs it, and
+ * (via skipWaiting + clients.claim) takes control promptly.
  */
-var CACHE = 'spf-v1';
+var CACHE = 'spf-v3';
 var SHELL = [
   './',
   './index.html',
@@ -35,13 +44,16 @@ self.addEventListener('activate', function (e) {
 self.addEventListener('fetch', function (e) {
   var url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== self.location.origin) return; // let CDN/API go to network
+  // Network-first: prefer the freshly deployed file, fall back to cache offline.
   e.respondWith(
-    caches.match(e.request).then(function (hit) {
-      return hit || fetch(e.request).then(function (res) {
-        var copy = res.clone();
-        caches.open(CACHE).then(function (c) { c.put(e.request, copy); });
-        return res;
-      }).catch(function () { return caches.match('./index.html'); });
+    fetch(e.request).then(function (res) {
+      var copy = res.clone();
+      caches.open(CACHE).then(function (c) { c.put(e.request, copy); });
+      return res;
+    }).catch(function () {
+      return caches.match(e.request).then(function (hit) {
+        return hit || (e.request.mode === 'navigate' ? caches.match('./index.html') : undefined);
+      });
     })
   );
 });
