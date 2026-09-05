@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Scholar Partner Finder</title>
   <meta name="description" content="Explore research complementarities and assemble RFP-ready teams from scholars' CVs. Local, private, self-contained." />
-  <meta name="theme-color" content="#0f766e" />
+  <meta name="theme-color" content="#5b4fe0" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
@@ -15,7 +15,7 @@
 <div class="app">
   <header class="topbar">
     <div class="brand">
-      <div class="logo">SP</div>
+      <div class="logo"><img src="icons/icon.svg" alt="Scholar Partner Finder logo" width="32" height="32" /></div>
       <div>Scholar Partner Finder<small>Complementarity &amp; RFP team-building &middot; runs entirely on your device</small></div>
     </div>
     <nav class="nav" id="nav">
@@ -30,7 +30,8 @@
       <button class="icon-btn" id="newProjectBtn" title="Create a new project">+ New</button>
     </div>
     <span class="roster-count" id="rosterCount">0 scholars</span>
-    <button class="icon-btn" id="themeToggle" title="Toggle light/dark">◐</button>
+    <button class="icon-btn" id="helpBtn" title="How this works" aria-label="Help">?</button>
+    <button class="icon-btn" id="themeToggle" title="Toggle light/dark" aria-label="Toggle light or dark theme">◐</button>
   </header>
 
   <main class="main">
@@ -64,12 +65,7 @@
           <p class="hint" style="margin-top:10px" id="rfpRosterHint"></p>
         </div>
 
-        <div id="rfpResults">
-          <div class="empty card pad">
-            <div class="big">🎯</div>
-            <p><strong>Rank your scholars against an opportunity.</strong><br>Add CVs to your roster, paste an RFP, and get an explainable shortlist, a coverage-maximising team, capacity gaps, and collaboration topics.</p>
-          </div>
-        </div>
+        <div id="rfpResults"><!-- guided empty state rendered by app.js --></div>
       </div>
     </section>
 
@@ -203,6 +199,15 @@
     <header><h3 id="modalTitle">Scholar</h3><button class="icon-btn" id="modalClose">✕</button></header>
     <div class="body" id="modalBody"></div>
     <footer id="modalFooter"></footer>
+  </div>
+</div>
+
+<!-- help modal (populated by app.js) -->
+<div class="modal-backdrop" id="helpBackdrop">
+  <div class="modal">
+    <header><h3>How Scholar Partner Finder works</h3><button class="icon-btn" id="helpClose" aria-label="Close">✕</button></header>
+    <div class="body" id="helpBody"></div>
+    <footer><button class="btn" id="helpDone">Got it</button></footer>
   </div>
 </div>
 

@@ -10,6 +10,27 @@
   var pct = function (x) { return Math.round(x * 100); };
   var title = function (s) { return SPF.engine.titleCase(s); };
 
+  // ---------- custom line-icon set (no emoji, consistent across the app) ----------
+  var ICONS = {
+    network: '<circle cx="6" cy="8" r="2.3"/><circle cx="18" cy="6" r="2.3"/><circle cx="15" cy="18" r="2.3"/><path d="M8.2 8.7 15.8 6.6"/><path d="M17 8.1 15.6 15.7"/><path d="M13.1 16.8 7.9 9.6"/>',
+    upload: '<path d="M12 15V4"/><path d="M8 8l4-4 4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>',
+    doc: '<path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><path d="M10 12h5"/><path d="M10 16h5"/>',
+    wand: '<path d="M4 20 14 10"/><path d="M15 4.5l1 2.2 2.4.8-2.4.8-1 2.2-1-2.2L11.6 7.5 14 6.7z"/><path d="M6.5 4.5l.5 1.2 1.3.5-1.3.5-.5 1.2-.5-1.2L4.7 6.7 6 6.2z"/>',
+    people: '<circle cx="9" cy="8.5" r="3"/><path d="M3.5 20c0-3 2.6-5 5.5-5s5.5 2 5.5 5"/><path d="M16 6a3 3 0 0 1 0 6"/><path d="M17 15c2 .6 3.5 2.2 3.5 5"/>',
+    search: '<circle cx="11" cy="11" r="6.2"/><path d="M20 20l-4.2-4.2"/>',
+    target: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.4"/><path d="M12 1v3"/><path d="M12 20v3"/><path d="M1 12h3"/><path d="M20 12h3"/>',
+    lock: '<rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/><circle cx="12" cy="15.5" r="1.4"/>',
+    grid: '<rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/>',
+    layers: '<path d="M12 3 21 8 12 13 3 8z"/><path d="M3 12l9 5 9-5"/><path d="M3 16l9 5 9-5"/>',
+    pin: '<path d="M12 21s6-5.3 6-10a6 6 0 1 0-12 0c0 4.7 6 10 6 10z"/><circle cx="12" cy="11" r="2.2"/>'
+  };
+  function svgIcon(name, size) {
+    var s = size || 24;
+    return '<svg viewBox="0 0 24 24" width="' + s + '" height="' + s + '" fill="none" stroke="currentColor" ' +
+      'stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || '') + '</svg>';
+  }
+  function iconBubble(name) { return '<span class="icon-bubble">' + svgIcon(name, 26) + '</span>'; }
+
   var state = {
     profiles: [],        // active project's roster (a filtered view of _all)
     _all: [],            // every profile across projects, in memory
@@ -81,7 +102,7 @@
     state.rfpEdits = { removed: [], added: [], boosts: {} };
     state.teamConstraints = { include: [], exclude: [] };
     state.rosterQuery = ''; if ($('rosterSearch')) $('rosterSearch').value = '';
-    if ($('rfpResults')) $('rfpResults').innerHTML = rfpEmptyHtml();
+    if ($('rfpResults')) renderRfpEmpty($('rfpResults'));
     refreshActiveProfiles();
     renderProjectSelect(); renderRoster(); updateCount();
   }
@@ -197,8 +218,8 @@
     }
     if (!state.profiles.length) {
       var msg = proj && proj.isSample
-        ? '<div class="big">📚</div><p>The demo project is empty. Use “Load 8 sample scholars”.</p>'
-        : '<div class="big">📚</div><p>No scholars in <strong>' + esc(proj ? proj.name : 'this project') + '</strong> yet. Drop CV files, paste a CV, or load the samples into the demo project.</p>';
+        ? iconBubble('people') + '<p>The demo project is empty. Use <strong>Load 8 sample scholars</strong> on the left.</p>'
+        : iconBubble('people') + '<p>No scholars in <strong>' + esc(proj ? proj.name : 'this project') + '</strong> yet.<br>Drop CV files on the left, paste a CV, or choose a folder of CVs. They stay on your device.</p>';
       box.appendChild(el('div', 'empty', msg));
       return;
     }
@@ -207,7 +228,7 @@
       .sort(function (a, b) { return (a.name || '').localeCompare(b.name || ''); })
       .filter(function (p) { return profileMatchesQuery(p, q); });
     if (!shown.length) {
-      box.appendChild(el('div', 'empty', '<div class="big">🔎</div><p>No scholars match “' + esc(state.rosterQuery) + '”.</p>'));
+      box.appendChild(el('div', 'empty', iconBubble('search') + '<p>No scholars match “' + esc(state.rosterQuery) + '”.</p>'));
       return;
     }
     shown.forEach(function (p) {
@@ -230,10 +251,75 @@
     });
   }
 
-  function rfpEmptyHtml() {
-    return '<div class="empty card pad"><div class="big">🎯</div><p><strong>Rank your scholars against an opportunity.</strong><br>' +
-      'Add CVs to your roster, paste an RFP, and get an explainable shortlist, a coverage-maximising team, capacity gaps, and collaboration topics.</p></div>';
+  // Guided empty state for the RFP view: a short "how it works" with working
+  // shortcuts, so a first-time user is never staring at a blank panel.
+  function renderRfpEmpty(box) {
+    box.innerHTML = '';
+    var hasRoster = state.profiles.length > 0;
+    var card = el('div', 'card pad guide');
+    var head = el('div', 'guide-head');
+    head.innerHTML = '<span class="guide-mark">' + svgIcon('network', 30) + '</span>' +
+      '<div><h2>Match your scholars to an opportunity</h2>' +
+      '<p class="hint">Three steps. Everything runs on your device; nothing is uploaded unless you turn on the optional AI layer.</p></div>';
+    card.appendChild(head);
+
+    var steps = el('div', 'guide-steps');
+    [
+      ['upload', '1 · Build a roster', hasRoster
+        ? 'This project has ' + state.profiles.length + ' scholar' + (state.profiles.length === 1 ? '' : 's') + '. Add more any time in the Roster tab.'
+        : 'Add faculty CVs (PDF, Word, or text) in the Roster tab. They stay on your device.'],
+      ['doc', '2 · Paste the opportunity', 'Drop an RFP, solicitation, or a short topic into the box on the left. The tool reads it as a set of requirements you can edit.'],
+      ['wand', '3 · Analyze', 'Get a ranked shortlist, a coverage-maximising team, a coverage matrix, capacity gaps, and collaboration topics, each traceable to specific terms.']
+    ].forEach(function (s) {
+      var st = el('div', 'guide-step');
+      st.innerHTML = '<span class="step-ico">' + svgIcon(s[0], 22) + '</span><div><div class="step-t">' + s[1] + '</div><div class="hint">' + s[2] + '</div></div>';
+      steps.appendChild(st);
+    });
+    card.appendChild(steps);
+
+    var row = el('div', 'btn-row'); row.style.marginTop = '4px';
+    if (!hasRoster) {
+      var addBtn = el('button', 'btn', 'Add CVs to the roster'); addBtn.onclick = function () { setView('roster'); };
+      row.appendChild(addBtn);
+      var demoBtn = el('button', 'btn secondary', 'Explore with demo data'); demoBtn.onclick = loadSamples;
+      row.appendChild(demoBtn);
+    } else {
+      var sampleBtn = el('button', 'btn secondary', 'Use a sample RFP');
+      sampleBtn.onclick = function () { if (SPF.samples) { $('rfpText').value = SPF.samples.rfp; $('rfpText').focus(); toast('Sample RFP loaded; press Analyze'); } };
+      row.appendChild(sampleBtn);
+    }
+    var helpLink = el('button', 'btn ghost', 'How it works'); helpLink.onclick = openHelp;
+    row.appendChild(helpLink);
+    card.appendChild(row);
+    box.appendChild(card);
   }
+
+  // ---------- help panel ----------
+  function helpBodyHtml() {
+    function block(icon, t, body) {
+      return '<div class="help-row"><span class="step-ico">' + svgIcon(icon, 22) + '</span><div><div class="step-t">' + t + '</div><div class="hint">' + body + '</div></div></div>';
+    }
+    return '' +
+      '<p class="hint">Scholar Partner Finder helps you assemble a research team for a funding opportunity, and explains every choice. It runs entirely in your browser.</p>' +
+      '<h3 class="help-h">The workflow</h3>' +
+      block('layers', 'Projects', 'Each project is a separate workspace with its own roster. Switch or create projects from the top bar. The bundled demo data lives in its own sample project and never mixes with your real work.') +
+      block('upload', 'Roster', 'Add CVs by dropping files, choosing a folder, or pasting text. Reading a CV is imperfect, so open any scholar to fix the name, remove a wrong capability, or add a tag. Curated tags count strongly.') +
+      block('doc', 'RFP Talent Search', 'Paste an opportunity and press Analyze. You can edit the requirements the tool extracted, mark some as a must, pin or exclude scholars, and export the result as HTML or CSV.') +
+      block('network', 'Team Explorer', 'Independent of any RFP, this surfaces complementary pairs and the bridge scholars who connect many others.') +
+      '<h3 class="help-h">Reading the team metrics</h3>' +
+      '<ul class="help-list">' +
+      '<li><strong>Requirement coverage</strong>: the share of the opportunity\'s requirements the team addresses.</li>' +
+      '<li><strong>Complementarity</strong>: how distinct the members\' strengths are (higher is more distinct).</li>' +
+      '<li><strong>Overlap</strong>: how much the members duplicate one another (lower is better).</li>' +
+      '<li><strong>Disciplines</strong>: how many distinct disciplines the team spans.</li>' +
+      '<li><strong>Team fit</strong>: coverage adjusted for complementarity. The parts are always shown, never just this one number.</li>' +
+      '</ul>' +
+      '<h3 class="help-h">Privacy</h3>' +
+      block('lock', 'Your documents stay on your device', 'CV text, profiles, and rosters are stored locally in your browser. Nothing is transmitted unless you explicitly enable the optional AI layer in Settings and provide your own API key.') +
+      '<p class="hint" style="margin-top:12px">Outputs are heuristic aids for your judgment, not advice or decisions. See the disclaimer at the foot of the page.</p>';
+  }
+  function openHelp() { $('helpBody').innerHTML = helpBodyHtml(); $('helpBackdrop').classList.add('open'); }
+  function closeHelp() { $('helpBackdrop').classList.remove('open'); }
 
   function persist(p) {
     if (state.activeProjectId && p.projectId == null) p.projectId = state.activeProjectId;
@@ -985,10 +1071,16 @@
       if (on) enablePdfJs().then(function () { toast('Enhanced PDF parsing ready'); }).catch(function (e) { toast(e.message, true); $('pdfEnhanced').checked = false; });
     };
 
+    // help
+    if ($('helpBtn')) $('helpBtn').onclick = openHelp;
+    if ($('helpClose')) $('helpClose').onclick = closeHelp;
+    if ($('helpDone')) $('helpDone').onclick = closeHelp;
+    if ($('helpBackdrop')) $('helpBackdrop').addEventListener('click', function (e) { if (e.target === $('helpBackdrop')) closeHelp(); });
+
     // modal
     $('modalClose').onclick = closeModal;
     $('modalBackdrop').addEventListener('click', function (e) { if (e.target === $('modalBackdrop')) closeModal(); });
-    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeModal(); closeHelp(); } });
   }
 
   // ---------- init ----------
@@ -1008,7 +1100,7 @@
     if (SPF.store && SPF.store.available) SPF.store.setSetting('activeProject', activeId);
     refreshActiveProfiles();
   }
-  function finishInit() { renderProjectSelect(); renderRoster(); updateCount(); renderProjectsPanel(); }
+  function finishInit() { renderProjectSelect(); renderRoster(); updateCount(); renderProjectsPanel(); if ($('rfpResults')) renderRfpEmpty($('rfpResults')); }
 
   function init() {
     wire();
