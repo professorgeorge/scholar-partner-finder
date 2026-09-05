@@ -216,3 +216,34 @@ details.raw pre { white-space: pre-wrap; background: var(--surface-2); padding: 
 .kbd { font-family: var(--mono); background: var(--surface-2); border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; font-size: 12px; }
 .divider { height: 1px; background: var(--border); margin: 18px 0; }
 .inline-list { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+
+/* ---- roster search ---- */
+input[type=search] { width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 8px 12px; outline: none; color: var(--text); }
+input[type=search]:focus { border-color: var(--accent); background: var(--surface); }
+
+/* ---- editable requirement chips ---- */
+.chip.req { padding-left: 6px; }
+.chip.req .star { cursor: pointer; color: var(--text-faint); font-size: 13px; line-height: 1; }
+.chip.req .star:hover { color: var(--amber); }
+.chip.req.must { outline: 2px solid var(--amber); outline-offset: -1px; }
+.chip.req.must .star { color: var(--amber); }
+
+/* ---- pin / exclude controls in the ranking ---- */
+.rank-acts { display: inline-flex; gap: 6px; margin-left: 10px; }
+.chip-btn { background: var(--surface-2); border: 1px solid var(--border); color: var(--text-dim); border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 600; }
+.chip-btn:hover { border-color: var(--accent); color: var(--accent-strong); }
+.chip-btn.on { background: var(--accent-soft); color: var(--accent-strong); border-color: transparent; }
+.rank-item.excluded { opacity: .5; }
+.rank-item.excluded .rank-name { text-decoration: line-through; }
+.why-off { margin-top: 6px; font-style: italic; }
+
+/* ---- coverage matrix ---- */
+.cov-matrix { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 13px; }
+.cov-matrix th, .cov-matrix td { border-bottom: 1px solid var(--border); padding: 7px 8px; text-align: center; }
+.cov-matrix th { font-size: 12px; color: var(--text-dim); font-weight: 650; white-space: nowrap; }
+.cov-matrix th.req-col, .cov-matrix td.req-col { text-align: left; }
+.cov-matrix td.cov-cell { width: 44px; }
+.cov-matrix tr.uncovered { background: var(--amber-soft); }
+.swatch { display: inline-block; width: 22px; height: 14px; border-radius: 3px; background: var(--accent); border: 1px solid var(--border); }
+.cov-yes { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--accent-strong); }
+.cov-no { font-weight: 700; color: var(--amber); font-size: 12px; }

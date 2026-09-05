@@ -96,6 +96,41 @@ async function main() {
   console.log('  capacity gaps (no one in pool): ' + poolGaps.map(g=>g.term).join(' | '));
   assert(poolGaps.some(g => /desalination|indigenous/.test(g.term)), 'capacity gap detects desalination or indigenous knowledge (nobody has it)');
 
+  // ---- 5b. Requirement editing, coverage matrix, constraints ----------
+  hr('Editable requirements + coverage matrix + team constraints');
+
+  assert(team.coverageMatrix && team.coverageMatrix.rows.length === Object.keys(rfp.tf).length, 'coverage matrix has a row per requirement');
+  assert(team.coverageMatrix.members.length === team.members.length, 'coverage matrix has a column per member');
+  assert(team.coverageMatrix.rows.every(r => r.perMember.length === team.members.length), 'every matrix row scores every member');
+  const wettest = team.coverageMatrix.rows.find(r => /water/.test(r.term));
+  assert(wettest && wettest.best >= 0.15 && wettest.covered, 'a water requirement is marked covered by the team');
+
+  assert(Array.isArray(team.alsoRan) && team.alsoRan.length === profiles.length - team.members.length, 'also-ran lists every non-member');
+  assert(team.alsoRan.every(a => a.marginalCoverage <= 0.5), 'left-off candidates add little marginal coverage');
+
+  const waterReqs = Object.keys(rfp.tf).filter(t => /water|desalination|watershed/.test(t));
+  const edited = SPF.engine.applyRequirementEdits(rfp, { removed: waterReqs });
+  assert(!Object.keys(edited.tf).some(t => /water|desalination|watershed/.test(t)), 'removed water requirements are gone from the edited RFP');
+  assert(Object.keys(edited.tf).length === Object.keys(rfp.tf).length - waterReqs.length, 'edited RFP has exactly the removed count fewer requirements');
+
+  const added = SPF.engine.applyRequirementEdits(rfp, { added: ['quantum sensing'] });
+  assert(Object.keys(added.tf).some(t => /quantum/.test(t)), 'added requirement appears in the edited RFP');
+  const addedCorpus = SPF.engine.buildCorpus(profiles, [added.tf]);
+  const addedGaps = SPF.engine.poolGapAnalysis(profiles, added, addedCorpus);
+  assert(addedGaps.some(g => /quantum/.test(g.term)), 'added quantum requirement shows up as a capacity gap');
+
+  const boosted = SPF.engine.applyRequirementEdits(rfp, { boosts: { [topRfp[0]]: 2 } });
+  assert(Math.abs(boosted.tf[topRfp[0]] - rfp.tf[topRfp[0]] * 2) < 1e-9, 'a boosted requirement has double weight');
+
+  const excludeId = team.members[0].profile.id;
+  const teamEx = SPF.engine.assembleTeam(profiles, rfp, { size: 4, exclude: [excludeId] }, corpus);
+  assert(!teamEx.members.some(m => m.profile.id === excludeId), 'excluded scholar is kept off the team');
+
+  const offTeam = ranked.map(r => r.profile).find(p => !team.members.some(m => m.profile.id === p.id));
+  const teamIn = SPF.engine.assembleTeam(profiles, rfp, { size: 4, include: [offTeam.id] }, corpus);
+  const pinned = teamIn.members.find(m => m.profile.id === offTeam.id);
+  assert(!!pinned && pinned.pinned === true, 'pinned scholar is placed on the team and flagged as pinned');
+
   // ---- 6. Bridge scholars ---------------------------------------------
   hr('Bridge scholars (connectors)');
   const bridges = SPF.engine.bridgeScholars(profiles, SPF.engine.buildCorpus(profiles));

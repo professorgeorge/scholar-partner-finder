@@ -97,6 +97,33 @@ async function main() {
   check(/Full ranking/.test(resText), 'full ranking rendered');
   check(/Ben Carter/.test(resText), 'a known scholar appears in results');
 
+  // New: editable requirements, coverage matrix, CSV export.
+  check(/Requirements the tool will match/.test(resText), 'editable requirement panel rendered');
+  check(/Who covers what/.test(resText), 'coverage matrix rendered');
+  check(/Download ranking \(CSV\)/.test(resText), 'CSV export button rendered');
+
+  // Removing a requirement chip re-runs the analysis with one fewer requirement.
+  const reqBefore = await evalJs("document.querySelectorAll('.chip.req').length");
+  await evalJs("(function(){var x=document.querySelector('.chip.req .x'); if(x) x.click();})()");
+  await sleep(400);
+  const reqAfter = await evalJs("document.querySelectorAll('.chip.req').length");
+  check(reqAfter === reqBefore - 1, 'removing a requirement drops it from the set (' + reqBefore + ' -> ' + reqAfter + ')');
+
+  // Pinning a scholar from the ranking places them on the team and flags them.
+  await evalJs("(function(){var btns=[].slice.call(document.querySelectorAll('.rank-item .chip-btn')); var pin=btns.filter(function(b){return b.textContent==='Pin';}).pop(); if(pin) pin.click();})()");
+  await sleep(400);
+  check(/pinned/.test(await evalJs("document.getElementById('rfpResults').innerText")), 'pinning a scholar flags them on the team');
+
+  // Roster search filters the list.
+  await evalJs("document.querySelector('[data-view=roster]').click()");
+  await sleep(150);
+  await evalJs("(function(){var s=document.getElementById('rosterSearch'); s.value='Carter'; s.dispatchEvent(new Event('input'));})()");
+  await sleep(200);
+  const rosterShown = await evalJs("document.querySelectorAll('#rosterList .scholar-row').length");
+  check(rosterShown === 1, 'roster search narrows to matching scholars (' + rosterShown + ')');
+  await evalJs("(function(){var s=document.getElementById('rosterSearch'); s.value=''; s.dispatchEvent(new Event('input'));})()");
+  await evalJs("document.querySelector('[data-view=rfp]').click()");
+
   // Team explorer
   await evalJs("document.querySelector('[data-view=team]').click()");
   await sleep(300);
