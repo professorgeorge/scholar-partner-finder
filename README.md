@@ -6,6 +6,13 @@ funding opportunity — in both directions. It runs entirely in the browser. No
 server, no account, no data leaves the device unless you deliberately turn on
 the optional AI layer.
 
+The interface follows a ledger-and-crosswalk visual language on purpose:
+hairline rules instead of drop shadows, a serif for headings and monospace for
+scores and tags (the way a printed ledger sets its numbers apart from its
+prose), and warm paper, brass, and forest-green in place of the teal-and-blue
+SaaS palette most generated tools default to. Start on the Roster tab; it's
+the first thing you see, and everything else follows from what's in it.
+
 The tool answers four questions that recur across a research university:
 
 1. **Given this RFP, who on our faculty should respond, and as what team?**

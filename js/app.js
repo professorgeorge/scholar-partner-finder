@@ -44,7 +44,8 @@
   }
 
   // ---------- avatar ----------
-  function avatarColor(name) { var h = 0; for (var i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360; return 'hsl(' + h + ',55%,45%)'; }
+  var AVATAR_COLORS = ['var(--forest)', 'var(--brass)', 'var(--blue-tag)', 'var(--violet-tag)', 'var(--brick)'];
+  function avatarColor(name) { var h = 0; for (var i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0; return AVATAR_COLORS[h % AVATAR_COLORS.length]; }
   function initials(name) { var p = name.trim().split(/\s+/); return ((p[0] || '?')[0] + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase(); }
 
   // ---------- roster ----------
@@ -52,13 +53,13 @@
     $('rosterCount').textContent = state.profiles.length + ' scholar' + (state.profiles.length === 1 ? '' : 's');
     $('rosterSub').textContent = state.profiles.length ? state.profiles.length + ' in library' : '';
     var hint = $('rfpRosterHint');
-    if (hint) hint.textContent = state.profiles.length ? '' : 'Your roster is empty. Add CVs under the Roster tab, or load the sample scholars.';
+    if (hint) hint.textContent = state.profiles.length ? '' : 'Your roster is empty. Add CVs under the Roster tab first.';
   }
 
   function renderRoster() {
     var box = $('rosterList'); box.innerHTML = '';
     if (!state.profiles.length) {
-      box.appendChild(el('div', 'empty', '<div class="big">📚</div><p>No scholars yet. Drop CV files, paste a CV, or load the samples.</p>'));
+      box.appendChild(el('div', 'empty', '<div class="big">\ud83d\udcda</div><p>No scholars yet. Drop CV files or paste one as text to get started.</p>'));
       return;
     }
     state.profiles.slice().sort(function (a, b) { return (a.name || '').localeCompare(b.name || ''); }).forEach(function (p) {
@@ -354,11 +355,12 @@
 
   // ---------- report export ----------
   function downloadReport(rfp, results, team, poolGaps, topics) {
-    var css = 'body{font:14px/1.6 -apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1a2230;max-width:820px;margin:32px auto;padding:0 18px}' +
-      'h1{font-size:24px}h2{font-size:18px;border-bottom:2px solid #0f766e;padding-bottom:4px;margin-top:28px}' +
-      '.chip{display:inline-block;background:#d7eeeb;color:#0b5c55;border-radius:999px;padding:2px 9px;font-size:12px;margin:2px}' +
-      'table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid #e2e6ec;padding:7px 8px;text-align:left;font-size:13px}' +
-      '.muted{color:#5b6675}.mem{border:1px solid #e2e6ec;border-radius:8px;padding:10px 12px;margin:8px 0}';
+    var css = 'body{font:14px/1.6 -apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#262019;background:#F2EEE1;max-width:820px;margin:32px auto;padding:0 18px}' +
+      'h1{font-family:Georgia,"Iowan Old Style","Palatino Linotype",serif;font-size:26px}' +
+      'h2{font-family:Georgia,"Iowan Old Style","Palatino Linotype",serif;font-size:18px;border-bottom:2px solid #8A6425;padding-bottom:4px;margin-top:28px}' +
+      '.chip{display:inline-block;background:#EBDDB9;color:#6B4C18;border-radius:3px;padding:2px 9px;font-size:12px;margin:2px;font-family:ui-monospace,Menlo,Consolas,monospace}' +
+      'table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid #D8D0BC;padding:7px 8px;text-align:left;font-size:13px}' +
+      '.muted{color:#5B5546}.mem{border:1px solid #D8D0BC;border-radius:3px;padding:10px 12px;margin:8px 0;background:#FBF9F1}';
     var h = [];
     h.push('<h1>Grant Crosswalk — RFP report</h1>');
     h.push('<p class="muted">Generated ' + new Date().toLocaleString() + '. All analysis performed locally.</p>');
@@ -370,7 +372,7 @@
       h.push('<div class="mem"><b>' + (i + 1) + '. ' + esc(m.profile.name) + '</b> <span class="muted">' + esc(m.profile.affiliation || '') + ' — relevance ' + m.relevance.toFixed(2) + '</span><br>' +
         'Contributes: ' + m.contributes.slice(0, 6).map(function (c) { return '<span class="chip">' + esc(title(c.term)) + '</span>'; }).join('') + '</div>');
     });
-    if (poolGaps.length) h.push('<h2>Capacity gaps (no one covers)</h2><p>' + poolGaps.slice(0, 14).map(function (g) { return '<span class="chip" style="background:#fdefd6;color:#b45309">' + esc(title(g.term)) + '</span>'; }).join('') + '</p>');
+    if (poolGaps.length) h.push('<h2>Capacity gaps (no one covers)</h2><p>' + poolGaps.slice(0, 14).map(function (g) { return '<span class="chip" style="background:#F1DBD1;color:#6E2D20">' + esc(title(g.term)) + '</span>'; }).join('') + '</p>');
     h.push('<h2>Collaboration topics</h2><ol>' + topics.map(function (t) { return '<li>' + esc(t.title || t.text) + (t.detail || t.rationale ? ' <span class="muted">— ' + esc(t.detail || t.rationale) + '</span>' : '') + '</li>'; }).join('') + '</ol>');
     h.push('<h2>Full ranking</h2><table><tr><th>#</th><th>Scholar</th><th>Score</th><th>Relevance</th><th>Top matches</th></tr>');
     results.forEach(function (r, i) {
@@ -684,6 +686,10 @@
     Array.prototype.forEach.call($('nav').children, function (b) { b.onclick = function () { setView(b.dataset.view); }; });
     $('themeToggle').onclick = toggleTheme;
     $('themeToggle2').onclick = toggleTheme;
+    $('onboardingDismiss').onclick = function () {
+      $('onboarding').classList.add('hidden');
+      if (GCX.store && GCX.store.setSetting) GCX.store.setSetting('onboardingDismissed', true);
+    };
 
     // dropzone
     var dz = $('dropzone');
@@ -757,6 +763,7 @@
     wire();
     if (GCX.store && GCX.store.available) {
       loadSettings();
+      GCX.store.getSetting('onboardingDismissed', false).then(function (v) { $('onboarding').classList.toggle('hidden', !!v); });
       GCX.store.getProfiles().then(function (arr) {
         state.profiles = arr || [];
         renderRoster(); updateCount();

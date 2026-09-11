@@ -95,6 +95,10 @@ async function main() {
   await sleep(400);
   const count = await evalJs("document.getElementById('rosterCount').textContent");
   check(/8 scholars/.test(count), 'added 8 scholars via the paste-CV flow (' + count + ')');
+  const rosterActive = await evalJs("document.getElementById('view-roster').classList.contains('active')");
+  check(rosterActive, 'Roster is the default landing view');
+  const onboardingText = await evalJs("document.getElementById('onboarding').innerText");
+  check(!/sample/i.test(onboardingText), 'onboarding banner does not reference the removed sample-data feature');
 
   // Go to RFP view, paste a sample RFP as a real user would, run analysis
   await evalJs("document.querySelector('[data-view=rfp]').click()");

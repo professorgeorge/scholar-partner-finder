@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Grant Crosswalk</title>
   <meta name="description" content="Match your researchers to funding opportunities and funding opportunities to your researchers &mdash; plus complementary team-building. Local, private, self-contained." />
-  <meta name="theme-color" content="#0f766e" />
+  <meta name="theme-color" content="#8A6425" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
@@ -15,12 +15,21 @@
 <div class="app">
   <header class="topbar">
     <div class="brand">
-      <div class="logo">GX</div>
-      <div>Grant Crosswalk<small>Match capacity to funding, both ways &middot; runs entirely on your device</small></div>
+      <div class="logo">
+        <svg width="34" height="34" viewBox="0 0 34 34" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect width="34" height="34" rx="3" class="logo-bg"/>
+          <g stroke-width="3.4" stroke-linecap="round">
+            <line x1="8" y1="24" x2="15" y2="10" class="logo-a"/>
+            <line x1="15" y1="24" x2="22" y2="10" class="logo-b"/>
+            <line x1="22" y1="24" x2="29" y2="10" class="logo-a"/>
+          </g>
+        </svg>
+      </div>
+      <div>Grant Crosswalk<small>Match capacity to funding, both ways</small></div>
     </div>
     <nav class="nav" id="nav">
-      <button data-view="rfp" class="active">RFP Talent Search</button>
-      <button data-view="roster">Roster</button>
+      <button data-view="roster" class="active">Roster</button>
+      <button data-view="rfp">RFP Talent Search</button>
       <button data-view="team">Team Explorer</button>
       <button data-view="funding">Find Funding</button>
       <button data-view="settings">Settings</button>
@@ -32,45 +41,19 @@
 
   <main class="main">
 
-    <!-- ============ RFP SEARCH (primary) ============ -->
-    <section class="view active" id="view-rfp">
-      <div class="grid side">
-        <div class="card pad">
-          <div class="section-title"><h2>Opportunity</h2></div>
-          <p class="hint" style="margin-top:-8px">Paste an RFP, solicitation, or a short research topic. The tool reads it as a set of requirements and ranks your roster against it.</p>
-          <label class="field">
-            <span>RFP / solicitation / topic</span>
-            <textarea id="rfpText" placeholder="Paste the funding opportunity text or describe the research topic..."></textarea>
-          </label>
-          <div class="btn-row" style="margin-bottom:12px">
-            <button class="btn secondary small" id="rfpUploadBtn">Upload RFP file</button>
-          </div>
-          <div class="divider"></div>
-          <label class="field">
-            <span>Ranking emphasis</span>
-            <div class="range"><span class="small" style="width:110px">Topic relevance</span><input type="range" id="wRelevance" min="0" max="100" value="70"><span class="val" id="wRelevanceV">70</span></div>
-            <div class="range"><span class="small" style="width:110px">Recent activity</span><input type="range" id="wRecent" min="0" max="100" value="20"><span class="val" id="wRecentV">20</span></div>
-            <div class="range"><span class="small" style="width:110px">Funding record</span><input type="range" id="wFunding" min="0" max="100" value="10"><span class="val" id="wFundingV">10</span></div>
-          </label>
-          <label class="field">
-            <span>Team size</span>
-            <div class="range"><input type="range" id="teamSize" min="2" max="6" value="4"><span class="val" id="teamSizeV">4</span></div>
-          </label>
-          <button class="btn" id="analyzeBtn" style="width:100%">Analyze &amp; build team</button>
-          <p class="hint" style="margin-top:10px" id="rfpRosterHint"></p>
+    <!-- ============ ROSTER (primary entry point) ============ -->
+    <section class="view active" id="view-roster">
+      <div class="onboarding" id="onboarding">
+        <div>
+          <h3>New here? Three steps to your first result.</h3>
+          <ol>
+            <li><b>Add scholars.</b> Drop CV files below, or paste one as text.</li>
+            <li><b>Paste an opportunity.</b> In RFP Talent Search, add a solicitation or a short research topic.</li>
+            <li><b>Analyze.</b> Get a ranked shortlist, a coverage-maximising team, and the gaps nobody covers.</li>
+          </ol>
         </div>
-
-        <div id="rfpResults">
-          <div class="empty card pad">
-            <div class="big">🎯</div>
-            <p><strong>Rank your scholars against an opportunity.</strong><br>Add CVs to your roster, paste an RFP, and get an explainable shortlist, a coverage-maximising team, capacity gaps, and collaboration topics.</p>
-          </div>
-        </div>
+        <button class="dismiss" id="onboardingDismiss">Got it</button>
       </div>
-    </section>
-
-    <!-- ============ ROSTER ============ -->
-    <section class="view" id="view-roster">
       <div class="grid side">
         <div class="card pad">
           <div class="section-title"><h2>Add scholars</h2></div>
@@ -104,6 +87,43 @@
         <div class="card">
           <div class="section-title" style="padding:16px 18px 0"><h2>Roster</h2><span class="sub" id="rosterSub"></span></div>
           <div id="rosterList"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ RFP SEARCH ============ -->
+    <section class="view" id="view-rfp">
+      <div class="grid side">
+        <div class="card pad">
+          <div class="section-title"><h2>Opportunity</h2></div>
+          <p class="hint" style="margin-top:-8px">Paste an RFP, solicitation, or a short research topic. The tool reads it as a set of requirements and ranks your roster against it.</p>
+          <label class="field">
+            <span>RFP / solicitation / topic</span>
+            <textarea id="rfpText" placeholder="Paste the funding opportunity text or describe the research topic..."></textarea>
+          </label>
+          <div class="btn-row" style="margin-bottom:12px">
+            <button class="btn secondary small" id="rfpUploadBtn">Upload RFP file</button>
+          </div>
+          <div class="divider"></div>
+          <label class="field">
+            <span>Ranking emphasis</span>
+            <div class="range"><span class="small" style="width:110px">Topic relevance</span><input type="range" id="wRelevance" min="0" max="100" value="70"><span class="val" id="wRelevanceV">70</span></div>
+            <div class="range"><span class="small" style="width:110px">Recent activity</span><input type="range" id="wRecent" min="0" max="100" value="20"><span class="val" id="wRecentV">20</span></div>
+            <div class="range"><span class="small" style="width:110px">Funding record</span><input type="range" id="wFunding" min="0" max="100" value="10"><span class="val" id="wFundingV">10</span></div>
+          </label>
+          <label class="field">
+            <span>Team size</span>
+            <div class="range"><input type="range" id="teamSize" min="2" max="6" value="4"><span class="val" id="teamSizeV">4</span></div>
+          </label>
+          <button class="btn" id="analyzeBtn" style="width:100%">Analyze &amp; build team</button>
+          <p class="hint" style="margin-top:10px" id="rfpRosterHint"></p>
+        </div>
+
+        <div id="rfpResults">
+          <div class="empty card pad">
+            <div class="big">🎯</div>
+            <p><strong>Rank your scholars against an opportunity.</strong><br>Add CVs to your roster, paste an RFP, and get an explainable shortlist, a coverage-maximising team, capacity gaps, and collaboration topics.</p>
+          </div>
         </div>
       </div>
     </section>
