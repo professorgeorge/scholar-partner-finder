@@ -1,6 +1,6 @@
 # Methodology
 
-This document sets out how Scholar Partner Finder turns unstructured CVs into
+This document sets out how Grant Crosswalk turns unstructured CVs into
 rankings, teams, and gap analyses. The aim is not sophistication for its own
 sake but transparency: every number the tool reports should be traceable to a
 stated rule and, ultimately, to specific words in the source documents. What
@@ -35,8 +35,8 @@ are given a strong weight because they represent a deliberate human judgment.
 Raw frequency is a poor measure of what makes a scholar distinctive. The word
 "research" appears in every CV and tells you nothing about who differs from whom.
 The tool therefore weights each concept by term frequency times inverse document
-frequency, computed across the active project's roster (and the RFP, treated as
-one more document). A concept that many scholars list receives a low inverse-document-
+frequency, computed across the current roster (and the RFP, treated as one more
+document). A concept that many scholars list receives a low inverse-document-
 frequency weight; a concept only a few share receives a high one. This is the
 standard information-retrieval device, and it is doing real work here: it is what
 lets the roster surface distinctive, combinable expertise rather than generic
@@ -63,21 +63,6 @@ factors, recent activity and funding record, each normalised across the roster
 and weighted by user-set sliders. The default places most weight on relevance;
 the other two exist because a dean may reasonably care about track record, and
 making that preference explicit is better than hiding it.
-
-## Correcting the requirement set
-
-The requirement set produced by this filter is a heuristic read of the
-announcement, and it is exposed for correction in the same spirit as a scholar
-profile. The extracted requirements are shown as editable items: a phrase that
-is really program boilerplate can be removed, a requirement the call implies but
-never states can be added (and is mapped onto a canonical lexicon capability
-where one matches), and a requirement can be marked as a must, which multiplies
-its weight. Because relevance, coverage, and the gap analysis all run on this
-set, editing it changes every downstream figure, and the intent is that the
-numbers describe the opportunity as the reader understands it rather than as the
-extractor happened to parse it. A requirement added by hand that no one in the
-roster covers surfaces immediately as a capacity gap, which is often the point of
-adding it.
 
 ## Complementarity and team assembly
 
@@ -112,28 +97,8 @@ strengths), overlap (the same average, surfaced separately so near-duplicates ar
 visible), and interdisciplinarity (the count of distinct disciplines
 represented). An overall team-fit figure combines coverage with the
 complementarity multiplier, but the components are always shown alongside it,
-because someone accounting for a shortlist needs the parts, not just the
+because a vice president defending a shortlist needs the parts, not just the
 conclusion.
-
-## Human constraints, the coverage matrix, and candidates left off
-
-Greedy coverage is a starting point, not a verdict, because it knows nothing of
-availability, collegiality, or a prior collaboration that a person may need to
-honour or avoid. Two constraints let that knowledge enter without pretending the
-model possesses it. A scholar can be pinned, in which case they are placed on the
-team before the greedy step runs and the remaining seats are filled around them,
-or excluded, in which case they are removed from consideration altogether. Both
-are recorded as the reader's choices, distinct from the ranking the arithmetic
-produced.
-
-The team's coverage is also shown in full rather than as a single percentage. A
-coverage matrix reports, for every requirement, the normalised strength each
-chosen member brings, so it is visible which member carries which requirement and
-which requirements remain thin. For a strong candidate who was not selected, the
-tool states how little additional coverage they would contribute and which member
-they most overlap with; this is meant to answer, in advance, the reasonable
-question of why a high scorer was left off, and to make that reasoning
-contestable rather than hidden.
 
 ## Gap analysis
 
@@ -165,21 +130,8 @@ collaboration bridge, and the leading themes of the RFP. It then composes topic
 suggestions that require combining distinct strengths toward a shared theme.
 These are generated from templates and should be read as structured starting
 points, not finished proposals. The optional AI layer, when enabled, replaces
-these with richer prose, while the local version keeps the feature working
+these with richer prose while the local version guarantees that the feature works
 offline and without any external dependency.
-
-## Projects and data isolation
-
-Everything above is computed within a single project. A project is a self-
-contained workspace with its own roster, and the TF-IDF weighting, relevance,
-coverage, and gap figures are all relative to the roster in the active project
-and to no other. This is a substantive point rather than a housekeeping one:
-because scores are comparative, the set of scholars a project contains is part of
-what the numbers mean, and keeping projects separate keeps those comparisons
-honest. The bundled demo data is held in its own project so that example
-scholars never enter a real analysis. All of this is stored locally on the
-device; nothing is transmitted unless the optional AI layer is explicitly turned
-on.
 
 ## What the tool does not claim
 
@@ -190,9 +142,3 @@ politics of a particular collaboration. The design choice throughout has been to
 make the reasoning visible rather than to maximise apparent precision, precisely
 so that the people who know the scholars can correct the machine where it is
 wrong.
-
-Nothing the tool produces is professional advice, a decision, or a
-recommendation, and it should not be relied upon as any of these. It is an aid to
-human judgment, offered without warranty and with no assurance of accuracy,
-completeness, or fitness for any particular use. Responsibility for any decision
-or action taken in light of its output rests entirely with the person taking it.

@@ -75,8 +75,8 @@ async function main() {
   let fail = 0; const check = (c, m) => { console.log((c ? '  PASS ' : '  FAIL ') + m); if (!c) fail++; };
 
   const title = await evalJs('document.title');
-  check(title === 'Scholar Partner Finder', 'page title loaded: ' + title);
-  check(await evalJs('typeof SPF!=="undefined" && !!SPF.engine'), 'SPF modules present in the browser');
+  check(title === 'Grant Crosswalk', 'page title loaded: ' + title);
+  check(await evalJs('typeof GCX!=="undefined" && !!GCX.engine'), 'GCX modules present in the browser');
 
   // Load samples
   await evalJs("document.getElementById('loadSamplesBtn').click()");
@@ -86,7 +86,7 @@ async function main() {
 
   // Go to RFP view, ensure sample RFP populated, run analysis
   await evalJs("document.querySelector('[data-view=rfp]').click()");
-  await evalJs("document.getElementById('rfpText').value = SPF.samples.rfp");
+  await evalJs("document.getElementById('rfpText').value = GCX.samples.rfp");
   await evalJs("document.getElementById('analyzeBtn').click()");
   await sleep(600);
   const resText = await evalJs("document.getElementById('rfpResults').innerText");
@@ -97,64 +97,42 @@ async function main() {
   check(/Full ranking/.test(resText), 'full ranking rendered');
   check(/Ben Carter/.test(resText), 'a known scholar appears in results');
 
-  // New: editable requirements, coverage matrix, CSV export.
-  check(/Requirements the tool will match/.test(resText), 'editable requirement panel rendered');
-  check(/Who covers what/.test(resText), 'coverage matrix rendered');
-  check(/Download ranking \(CSV\)/.test(resText), 'CSV export button rendered');
-
-  // Removing a requirement chip re-runs the analysis with one fewer requirement.
-  const reqBefore = await evalJs("document.querySelectorAll('.chip.req').length");
-  await evalJs("(function(){var x=document.querySelector('.chip.req .x'); if(x) x.click();})()");
-  await sleep(400);
-  const reqAfter = await evalJs("document.querySelectorAll('.chip.req').length");
-  check(reqAfter === reqBefore - 1, 'removing a requirement drops it from the set (' + reqBefore + ' -> ' + reqAfter + ')');
-
-  // Pinning a scholar from the ranking places them on the team and flags them.
-  await evalJs("(function(){var btns=[].slice.call(document.querySelectorAll('.rank-item .chip-btn')); var pin=btns.filter(function(b){return b.textContent==='Pin';}).pop(); if(pin) pin.click();})()");
-  await sleep(400);
-  check(/pinned/.test(await evalJs("document.getElementById('rfpResults').innerText")), 'pinning a scholar flags them on the team');
-
-  // Roster search filters the list.
-  await evalJs("document.querySelector('[data-view=roster]').click()");
-  await sleep(150);
-  await evalJs("(function(){var s=document.getElementById('rosterSearch'); s.value='Carter'; s.dispatchEvent(new Event('input'));})()");
-  await sleep(200);
-  const rosterShown = await evalJs("document.querySelectorAll('#rosterList .scholar-row').length");
-  check(rosterShown === 1, 'roster search narrows to matching scholars (' + rosterShown + ')');
-  await evalJs("(function(){var s=document.getElementById('rosterSearch'); s.value=''; s.dispatchEvent(new Event('input'));})()");
-
-  // Projects: the demo data loaded into its own isolated sample project.
-  const activeOpt = await evalJs("(function(){var s=document.getElementById('projectSelect'); return s.options[s.selectedIndex].text;})()");
-  check(/demo/i.test(activeOpt), 'sample data loaded into the demo project (' + activeOpt + ')');
-  check(/demo data/i.test(await evalJs("document.getElementById('rosterList').innerText")), 'demo banner shown in the sample project');
-
-  // A new project starts empty and isolated from the demo roster.
-  await evalJs("window.prompt=function(){return 'Test Project';}");
-  await evalJs("document.getElementById('newProjectBtn').click()");
-  await sleep(300);
-  const newCount = await evalJs("document.querySelectorAll('#rosterList .scholar-row').length");
-  check(newCount === 0, 'a new project starts with an empty roster (isolation) (' + newCount + ')');
-  const optCount = await evalJs("document.getElementById('projectSelect').options.length");
-  check(optCount >= 3, 'project switcher lists all projects (' + optCount + ')');
-
-  // Switching back to the demo project restores its 8 scholars.
-  await evalJs("(function(){var s=document.getElementById('projectSelect'); var demo=[].slice.call(s.options).filter(function(o){return /demo/i.test(o.text);})[0]; s.value=demo.value; s.dispatchEvent(new Event('change'));})()");
-  await sleep(300);
-  const backCount = await evalJs("document.querySelectorAll('#rosterList .scholar-row').length");
-  check(backCount === 8, 'switching back to demo restores its roster (' + backCount + ')');
-
-  // Footer credit and disclaimer.
-  const bodyText = await evalJs("document.body.innerText");
-  check(/Professor Babu George/.test(bodyText), 'footer credit present');
-  check(/without warranties/i.test(bodyText), 'footer legal disclaimer present');
-
-  await evalJs("document.querySelector('[data-view=rfp]').click()");
-
   // Team explorer
   await evalJs("document.querySelector('[data-view=team]').click()");
   await sleep(300);
   const pairs = await evalJs("document.getElementById('pairsList').innerText");
   check(pairs.length > 10, 'complementary pairs rendered');
+  await evalJs("document.getElementById('buildTeamBtn').click()");
+  await sleep(300);
+  const teamResultHtml = await evalJs("document.getElementById('teamModeResult').innerHTML");
+  check(!/Draft richer proposals with AI/.test(teamResultHtml), 'AI proposal button is absent while the AI layer is off (default)');
+
+  // Find Funding: gated by consent until enabled in Settings
+  await evalJs("document.querySelector('[data-view=funding]').click()");
+  await sleep(200);
+  const pickerOptions = await evalJs("document.getElementById('fundingScholarSelect').options.length");
+  check(pickerOptions === 8, 'funding scholar picker populated (' + pickerOptions + ' options)');
+  await evalJs("document.getElementById('fundingSearchBtn').click()");
+  await sleep(300);
+  const gatedText = await evalJs("document.getElementById('fundingResults').innerText");
+  check(/turned off/.test(gatedText), 'search is consent-gated until enabled in Settings');
+
+  // Enable it, then confirm the feature degrades gracefully with no
+  // internet access in this sandbox (a real deployment would return results).
+  await evalJs("document.querySelector('[data-view=settings]').click()");
+  await sleep(150);
+  await evalJs("document.getElementById('fundingEnabled').checked = true; document.getElementById('fundingSaveBtn').click()");
+  await sleep(150);
+  await evalJs("document.querySelector('[data-view=funding]').click()");
+  await sleep(150);
+  await evalJs("document.getElementById('fundingSearchBtn').click()");
+  await sleep(2000);
+  const searchedText = await evalJs("document.getElementById('fundingResults').innerText");
+  check(/Matches for|Could not search Grants\.gov/.test(searchedText), 'funding search resolved (live results or graceful fallback)');
+  if (/Could not search/.test(searchedText)) {
+    const hasManualLink = await evalJs("!!document.querySelector('#fundingResults a[href*=\"grants.gov\"]')");
+    check(hasManualLink, 'fallback includes a manual grants.gov search link');
+  }
 
   // Roster edit modal opens
   await evalJs("document.querySelector('[data-view=roster]').click()");

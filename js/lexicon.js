@@ -12,7 +12,7 @@
  * university, from humanities to health sciences. Coverage is broad rather
  * than deep; the TF-IDF phrase miner in extract.js does the fine-grained work.
  */
-(function (SPF) {
+(function (GCX) {
   'use strict';
 
   // Ordinary English function words plus CV boilerplate that carries no signal.
@@ -201,7 +201,7 @@
     return index;
   }
 
-  SPF.lexicon = {
+  GCX.lexicon = {
     STOPWORDS: STOPWORDS,
     STOPSET: (function () { var s = Object.create(null); STOPWORDS.forEach(function (w) { s[w] = true; }); return s; })(),
     METHODS: METHODS,
@@ -212,4 +212,4 @@
     SECTION_HEADERS: SECTION_HEADERS,
     index: buildIndex()
   };
-})(typeof window !== 'undefined' ? (window.SPF = window.SPF || {}) : (globalThis.SPF = globalThis.SPF || {}));
+})(typeof window !== 'undefined' ? (window.GCX = window.GCX || {}) : (globalThis.GCX = globalThis.GCX || {}));

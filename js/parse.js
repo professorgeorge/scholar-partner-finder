@@ -4,7 +4,7 @@
  *
  * Supported: .txt .md .csv .tsv .rtf .html .htm (trivial), .docx (via a
  * minimal ZIP reader + the platform DecompressionStream), and .pdf (via a
- * from-scratch content-stream text extractor). If SPF.pdfjs has been loaded
+ * from-scratch content-stream text extractor). If GCX.pdfjs has been loaded
  * (optional, opt-in), it is used for PDFs instead, which is more accurate.
  *
  * The PDF extractor is best-effort: it recovers text from digitally created
@@ -12,7 +12,7 @@
  * font encodings. The UI exposes a "paste text" fallback and manual editing
  * for exactly these cases.
  */
-(function (SPF) {
+(function (GCX) {
   'use strict';
 
   // ---- generic helpers ---------------------------------------------------
@@ -281,8 +281,8 @@
   }
 
   async function fromPdf(bytes) {
-    if (SPF.pdfjs && typeof SPF.pdfjs.extract === 'function') {
-      try { return cleanText(await SPF.pdfjs.extract(bytes)); } catch (e) { /* fall through */ }
+    if (GCX.pdfjs && typeof GCX.pdfjs.extract === 'function') {
+      try { return cleanText(await GCX.pdfjs.extract(bytes)); } catch (e) { /* fall through */ }
     }
     var latin = decodeLatin1(bytes);
     var text = '';
@@ -351,7 +351,7 @@
     });
   }
 
-  SPF.parse = {
+  GCX.parse = {
     parseBuffer: parseBuffer,
     parseFile: parseFile,
     fromPdf: fromPdf,
@@ -359,4 +359,4 @@
     cleanText: cleanText,
     extOf: extOf
   };
-})(typeof window !== 'undefined' ? (window.SPF = window.SPF || {}) : (globalThis.SPF = globalThis.SPF || {}));
+})(typeof window !== 'undefined' ? (window.GCX = window.GCX || {}) : (globalThis.GCX = globalThis.GCX || {}));

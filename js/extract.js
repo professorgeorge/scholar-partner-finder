@@ -12,10 +12,10 @@
  * editable in the UI, because no automated reader is perfect and a dean
  * defending a shortlist needs to trust and correct what it sees.
  */
-(function (SPF) {
+(function (GCX) {
   'use strict';
 
-  var LEX = SPF.lexicon;
+  var LEX = GCX.lexicon;
 
   // Weight the same phrase differently depending on the CV section it sits in.
   var SECTION_WEIGHT = {
@@ -173,7 +173,7 @@
   function buildProfile(text, options) {
     options = options || {};
     var currentYear = options.currentYear || new Date().getFullYear();
-    text = SPF.parse ? SPF.parse.cleanText(text) : text;
+    text = GCX.parse ? GCX.parse.cleanText(text) : text;
     var sections = segment(text);
     var fullNorm = normalize(text);
     var identity = guessIdentity(text, options.filename);
@@ -222,7 +222,7 @@
     return groups;
   }
 
-  SPF.extract = {
+  GCX.extract = {
     buildProfile: buildProfile,
     groupCapabilities: groupCapabilities,
     normalize: normalize,
@@ -230,4 +230,4 @@
     SECTION_WEIGHT: SECTION_WEIGHT,
     CATEGORY_WEIGHT: CATEGORY_WEIGHT
   };
-})(typeof window !== 'undefined' ? (window.SPF = window.SPF || {}) : (globalThis.SPF = globalThis.SPF || {}));
+})(typeof window !== 'undefined' ? (window.GCX = window.GCX || {}) : (globalThis.GCX = globalThis.GCX || {}));

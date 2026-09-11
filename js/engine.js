@@ -25,11 +25,11 @@
  *    reported separately, because a VP defending a shortlist needs the parts,
  *    not just a verdict.
  */
-(function (SPF) {
+(function (GCX) {
   'use strict';
 
-  var LEX = SPF.lexicon;
-  var EX = SPF.extract;
+  var LEX = GCX.lexicon;
+  var EX = GCX.extract;
 
   function titleCase(s) {
     return String(s).replace(/\b([a-z])/g, function (m, c) { return c.toUpperCase(); })
@@ -114,7 +114,7 @@
   })();
 
   function analyzeRFP(text) {
-    text = SPF.parse ? SPF.parse.cleanText(text) : text;
+    text = GCX.parse ? GCX.parse.cleanText(text) : text;
     var nrm = EX.normalize(text);
     // Treat the whole RFP as one block; boost lexicon capabilities.
     var caps = capsFromNorm(nrm);
@@ -192,74 +192,6 @@
       }
     });
     return freq;
-  }
-
-  // ---- requirement editing (human correction of the RFP read) ------------
-
-  // Resolve a user-typed requirement to a canonical lexicon term + category
-  // where possible, so an added requirement participates in matching exactly
-  // as a detected one would. Unknown terms enter as free phrases.
-  function categorizeTerm(term) {
-    var t = String(term == null ? '' : term).toLowerCase().trim().replace(/\s+/g, ' ');
-    if (!t) return null;
-    if (LEX && LEX.index) {
-      for (var i = 0; i < LEX.index.length; i++) if (LEX.index[i].canonical === t) return { canonical: t, category: LEX.index[i].category };
-      for (var j = 0; j < LEX.index.length; j++) if (LEX.index[j].variant === t) return { canonical: LEX.index[j].canonical, category: LEX.index[j].category };
-    }
-    return { canonical: t, category: 'phrase' };
-  }
-
-  /*
-   * Apply human corrections to an analysed RFP and return a new RFP object
-   * (same shape as analyzeRFP) that the rest of the engine consumes unchanged.
-   *
-   * edits: {
-   *   removed: [term, ...],             // drop these requirements entirely
-   *   added:   [term | {term, weight}], // add requirements (canonicalised)
-   *   boosts:  { term: factor, ... }    // multiply a requirement's weight (a "must" uses 2)
-   * }
-   *
-   * The correction philosophy is the one the scholar editor already embodies:
-   * no automated reader is trusted silently, so the requirement set a ranking
-   * runs on is something a human can see and fix.
-   */
-  function applyRequirementEdits(rfp, edits) {
-    edits = edits || {};
-    var removed = Object.create(null); (edits.removed || []).forEach(function (t) { removed[t] = true; });
-    var boosts = edits.boosts || {};
-    var concepts = Object.create(null);
-    Object.keys(rfp.concepts || {}).forEach(function (k) { concepts[k] = rfp.concepts[k]; });
-
-    var vals = [];
-    Object.keys(rfp.tf).forEach(function (k) { if (!removed[k]) vals.push(rfp.tf[k]); });
-    var avg = vals.length ? vals.reduce(function (a, b) { return a + b; }, 0) / vals.length : 2;
-
-    var tf = Object.create(null);
-    Object.keys(rfp.tf).forEach(function (k) {
-      if (removed[k]) return;
-      tf[k] = rfp.tf[k] * (boosts[k] || 1);
-    });
-    (edits.added || []).forEach(function (a) {
-      var cat = categorizeTerm(typeof a === 'string' ? a : a && a.term);
-      if (!cat || removed[cat.canonical]) return;
-      var base = (a && a.weight) ? a.weight : avg;
-      base *= (boosts[cat.canonical] || 1);
-      tf[cat.canonical] = Math.max(tf[cat.canonical] || 0, base);
-      if (!concepts[cat.canonical]) concepts[cat.canonical] = { term: cat.canonical, category: cat.category, tf: base };
-    });
-
-    var themes = [], funders = [];
-    Object.keys(tf).forEach(function (k) {
-      var c = concepts[k]; if (!c) return;
-      if (c.category === 'theme') themes.push(k);
-      else if (c.category === 'funder') funders.push(k);
-    });
-    return {
-      text: rfp.text, concepts: concepts, tf: tf,
-      themes: themes.length ? themes : rfp.themes,
-      funders: funders.length ? funders : rfp.funders,
-      edited: true
-    };
   }
 
   // ---- individual scoring ------------------------------------------------
@@ -344,47 +276,23 @@
    * opts: { size, relevanceFloor }
    */
   function assembleTeam(profiles, rfpAnalysis, opts, corpus) {
-    opts = Object.assign({ size: 4, relevanceFloor: 0.03, include: [], exclude: [] }, opts || {});
+    opts = Object.assign({ size: 4, relevanceFloor: 0.03 }, opts || {});
     corpus = corpus || buildCorpus(profiles, [rfpAnalysis.tf]);
     var ctx = rfpConceptStrengths(profiles, rfpAnalysis, corpus);
     var rfpVec = vectorize(rfpAnalysis.tf, corpus);
 
-    var excludeSet = Object.create(null); (opts.exclude || []).forEach(function (id) { excludeSet[id] = true; });
-    var includeSet = Object.create(null); (opts.include || []).forEach(function (id) { includeSet[id] = true; });
-
-    // Every scholar with its RFP relevance, then split by human constraints.
-    var all = profiles.map(function (p, idx) {
+    // Precompute relevance to filter out irrelevant candidates.
+    var candidates = profiles.map(function (p, idx) {
+      return { p: p, idx: idx, vec: ctx.vectors[idx], relevance: cosine(ctx.vectors[idx], rfpVec) };
+    }).filter(function (c) { return c.relevance >= opts.relevanceFloor; });
+    if (candidates.length === 0) candidates = profiles.map(function (p, idx) {
       return { p: p, idx: idx, vec: ctx.vectors[idx], relevance: cosine(ctx.vectors[idx], rfpVec) };
     });
-    var pool = all.filter(function (c) { return !excludeSet[c.p.id]; });
-    // Pinned members are placed first, in descending relevance, regardless of floor.
-    var forced = pool.filter(function (c) { return includeSet[c.p.id]; })
-      .sort(function (a, b) { return b.relevance - a.relevance; });
-    var candidates = pool.filter(function (c) { return !includeSet[c.p.id] && c.relevance >= opts.relevanceFloor; });
-    if (candidates.length === 0 && forced.length === 0) candidates = pool.slice();
 
     var team = [];
     var chosenVecs = [];
     var lastValue = 0;
     var contributions = []; // parallel to team: {term, gain}
-
-    function place(c) {
-      var prevCov = coverageValue(chosenVecs, rfpAnalysis, ctx);
-      var cov = coverageValue(chosenVecs.concat([c.vec]), rfpAnalysis, ctx);
-      var newlyCovered = ctx.rfpTerms.map(function (t) {
-        return { term: t, gain: (cov.perTerm[t] - (prevCov.perTerm[t] || 0)) * rfpAnalysis.tf[t] };
-      }).filter(function (x) { return x.gain > 1e-6; }).sort(function (a, b) { return b.gain - a.gain; });
-      team.push(c);
-      chosenVecs.push(c.vec);
-      contributions.push(newlyCovered.slice(0, 6));
-      lastValue = cov.value;
-    }
-
-    // 1) Honour pinned members first (a deliberate human decision the model
-    //    is not entitled to override).
-    forced.forEach(function (c) { if (team.length < opts.size) place(c); });
-
-    // 2) Greedily fill the rest by marginal coverage gain.
     while (team.length < opts.size && candidates.length) {
       var best = null, bestGain = 0, bestCov = null;
       candidates.forEach(function (c) {
@@ -392,21 +300,24 @@
         var gain = cov.value - lastValue;
         if (gain > bestGain || best === null) { best = c; bestGain = gain; bestCov = cov; }
       });
-      if (!best || (bestGain <= 1e-9 && team.length > 0)) break;
-      place(best);
+      if (!best || bestGain <= 1e-9 && team.length > 0) break;
+      // Record what this member newly contributes.
+      var prevCov = coverageValue(chosenVecs, rfpAnalysis, ctx);
+      var newlyCovered = ctx.rfpTerms.map(function (t) {
+        return { term: t, gain: (bestCov.perTerm[t] - (prevCov.perTerm[t] || 0)) * rfpAnalysis.tf[t] };
+      }).filter(function (x) { return x.gain > 1e-6; }).sort(function (a, b) { return b.gain - a.gain; });
+      team.push(best);
+      chosenVecs.push(best.vec);
+      contributions.push(newlyCovered.slice(0, 6));
+      lastValue = bestCov.value;
       candidates = candidates.filter(function (c) { return c !== best; });
     }
 
     var members = team.map(function (t, i) {
-      return {
-        profile: t.p, relevance: t.relevance, pinned: !!includeSet[t.p.id],
-        contributes: contributions[i].map(function (x) { return { term: x.term, category: categoryOf(t.p, x.term), gain: x.gain }; })
-      };
+      return { profile: t.p, relevance: t.relevance, contributes: contributions[i].map(function (x) { return { term: x.term, category: categoryOf(t.p, x.term), gain: x.gain }; }) };
     });
     var metrics = teamMetrics(team.map(function (t) { return t.vec; }), team.map(function (t) { return t.p; }), rfpAnalysis, ctx);
     var gaps = gapAnalysis(rfpAnalysis, ctx, chosenVecs);
-    var matrix = coverageMatrix(rfpAnalysis, ctx, team);
-    var alsoRan = alsoRanAnalysis(rfpAnalysis, ctx, team, pool, chosenVecs);
     return {
       members: members,
       coverage: metrics.coverage,
@@ -416,47 +327,8 @@
       interdisciplinarity: metrics.interdisciplinarity,
       disciplines: metrics.disciplines,
       teamFit: metrics.teamFit,
-      gaps: gaps,
-      coverageMatrix: matrix,
-      alsoRan: alsoRan
+      gaps: gaps
     };
-  }
-
-  // Requirement-by-member coverage: for each RFP requirement, the normalised
-  // strength each chosen member brings, plus the team's best and whether the
-  // requirement clears the coverage threshold. This is the single most
-  // defensible artifact a shortlist can carry into a committee.
-  function coverageMatrix(rfpAnalysis, ctx, team) {
-    var THRESH = 0.15;
-    var rows = ctx.rfpTerms.map(function (t) {
-      var perMember = team.map(function (c) { return memberNorm(c.vec, t, ctx.poolMax); });
-      var best = perMember.reduce(function (m, x) { return x > m ? x : m; }, 0);
-      return {
-        term: t, category: (rfpAnalysis.concepts[t] || {}).category || 'phrase',
-        weight: rfpAnalysis.tf[t], perMember: perMember, best: best, covered: best >= THRESH
-      };
-    });
-    rows.sort(function (a, b) { return b.weight - a.weight; });
-    return { members: team.map(function (c) { return c.p.name; }), rows: rows };
-  }
-
-  // For each strong candidate left off the team, how much coverage they would
-  // still add (usually little) and which member they most duplicate. This
-  // pre-empts the obvious challenge: "why isn't this high scorer on the team?"
-  function alsoRanAnalysis(rfpAnalysis, ctx, team, pool, chosenVecs) {
-    var teamIds = Object.create(null); team.forEach(function (c) { teamIds[c.p.id] = true; });
-    var totalWeight = 0; ctx.rfpTerms.forEach(function (t) { totalWeight += rfpAnalysis.tf[t]; });
-    var finalValue = coverageValue(chosenVecs, rfpAnalysis, ctx).value;
-    return pool.filter(function (c) { return !teamIds[c.p.id]; }).map(function (c) {
-      var marg = coverageValue(chosenVecs.concat([c.vec]), rfpAnalysis, ctx).value - finalValue;
-      var bestSim = 0, bestMember = null;
-      team.forEach(function (m) { var s = cosine(c.vec, m.vec); if (s > bestSim) { bestSim = s; bestMember = m.p; } });
-      return {
-        profile: c.p, relevance: c.relevance,
-        marginalCoverage: totalWeight > 0 ? marg / totalWeight : 0,
-        redundantWith: bestMember ? bestMember.name : null, overlap: bestSim
-      };
-    }).sort(function (a, b) { return b.relevance - a.relevance; });
   }
 
   function teamMetrics(vecs, profs, rfpAnalysis, ctx) {
@@ -732,14 +604,12 @@
     return out.slice(0, 6);
   }
 
-  SPF.engine = {
+  GCX.engine = {
     buildCorpus: buildCorpus,
     vectorize: vectorize,
     effectiveTf: effectiveTf,
     cosine: cosine,
     analyzeRFP: analyzeRFP,
-    applyRequirementEdits: applyRequirementEdits,
-    categorizeTerm: categorizeTerm,
     scoreScholarsForRFP: scoreScholarsForRFP,
     assembleTeam: assembleTeam,
     gapAnalysis: gapAnalysis,
@@ -752,4 +622,4 @@
     sharedConcepts: sharedConcepts,
     titleCase: titleCase
   };
-})(typeof window !== 'undefined' ? (window.SPF = window.SPF || {}) : (globalThis.SPF = globalThis.SPF || {}));
+})(typeof window !== 'undefined' ? (window.GCX = window.GCX || {}) : (globalThis.GCX = globalThis.GCX || {}));

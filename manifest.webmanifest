@@ -1,13 +1,13 @@
 {
-  "name": "Scholar Partner Finder",
-  "short_name": "Partner Finder",
-  "description": "Explore research complementarities and assemble RFP-ready teams from scholars' CVs. Runs locally and privately on your device.",
+  "name": "Grant Crosswalk",
+  "short_name": "Crosswalk",
+  "description": "Match your researchers to funding opportunities and funding opportunities to your researchers — plus complementary team-building — from CVs alone, locally and privately.",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#f5f6fb",
-  "theme_color": "#5b4fe0",
+  "background_color": "#f6f7f9",
+  "theme_color": "#0f766e",
   "categories": ["productivity", "education", "utilities"],
   "icons": [
     { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },

@@ -3,10 +3,21 @@
  * fully functional without it; nothing here runs unless the user pastes their
  * own API key and turns the layer on in Settings.
  *
- * What it can add, when enabled:
- *   - Cleaner structured extraction from messy CV text (better tags).
- *   - Richer, less templated collaboration-topic proposals.
- *   - A short narrative rationale for a proposed team.
+ * What it can add, when enabled, and where each shows up:
+ *   - Cleaner structured extraction from messy CV text, plus a one-sentence
+ *     profile summary (Roster: "Enhance tags with AI").
+ *   - Richer, less templated collaboration-topic proposals for an assembled
+ *     team (RFP Talent Search, and Team Explorer's complementary-team mode).
+ *   - Concrete guidance on closing roster-level capacity gaps: what kind of
+ *     partner or hire would fill a specific unmet requirement (RFP Talent
+ *     Search's capacity-gap list).
+ *   - A short fit rationale and proposal angle for each of a scholar's
+ *     top Find Funding matches.
+ *
+ * Every one of these sends only capability-level data (grouped tags, gap
+ * terms, public opportunity text) rather than raw CV text; enhanceProfile is
+ * the sole exception, gated by its own separate "allow CV text" consent
+ * checkbox in Settings.
  *
  * Design principles:
  *   - Bring-your-own-key. The key is stored only in this browser (IndexedDB)
@@ -16,83 +27,24 @@
  *   - Provider-agnostic: Anthropic Messages API, or any OpenAI-compatible
  *     chat-completions endpoint (OpenAI, Azure, local servers, gateways).
  */
-(function (SPF) {
+(function (GCX) {
   'use strict';
 
   var DEFAULT = {
     enabled: false,
-    provider: 'anthropic',        // key of PROVIDERS below
+    provider: 'anthropic',        // 'anthropic' | 'openai'
     apiKey: '',
-    model: '',                    // blank means "use the provider's default"
-    baseUrl: '',                  // override for openai-compatible / local endpoints
+    model: 'claude-3-5-haiku-latest',
+    baseUrl: '',                  // for openai-compatible custom endpoints
     allowCvText: false            // extra explicit consent to send CV text
   };
-
-  /*
-   * Provider registry. Three request styles are supported:
-   *   - 'anthropic': the Anthropic Messages API.
-   *   - 'openai':    any OpenAI-compatible /chat/completions endpoint. Most
-   *                  providers below (OpenAI, xAI Grok, Groq, OpenRouter, a
-   *                  local Ollama server, and custom gateways) share this shape,
-   *                  differing only in base URL, default model, and whether a
-   *                  key is required.
-   *   - 'gemini':    Google's Generative Language generateContent endpoint.
-   *
-   * `keyless` marks a provider (Ollama) that needs no API key. `editableBase`
-   * controls whether the Settings UI exposes a Base URL field. `hint` is shown
-   * under the provider picker. Model names drift over time, so each is only a
-   * sensible default the user can override.
-   */
-  var PROVIDERS = {
-    anthropic: {
-      label: 'Anthropic (Claude)', style: 'anthropic', baseUrl: 'https://api.anthropic.com/v1',
-      model: 'claude-3-5-haiku-latest', keyless: false, editableBase: false,
-      hint: 'Key from console.anthropic.com. Browser access uses Anthropic’s direct-access header.'
-    },
-    gemini: {
-      label: 'Google Gemini (free tier)', style: 'gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
-      model: 'gemini-1.5-flash', keyless: false, editableBase: false,
-      hint: 'Free tier: create a key at aistudio.google.com/apikey. Works directly from the browser.'
-    },
-    groq: {
-      label: 'Groq (free tier, fast)', style: 'openai', baseUrl: 'https://api.groq.com/openai/v1',
-      model: 'llama-3.1-8b-instant', keyless: false, editableBase: false,
-      hint: 'Free API key at console.groq.com/keys. Fast, OpenAI-compatible. Browsers with CORS restrictions may need a proxy.'
-    },
-    openrouter: {
-      label: 'OpenRouter (free models)', style: 'openai', baseUrl: 'https://openrouter.ai/api/v1',
-      model: 'meta-llama/llama-3.1-8b-instruct:free', keyless: false, editableBase: false,
-      hint: 'Key at openrouter.ai/keys. Many free models (slugs ending in :free) are listed at openrouter.ai/models.'
-    },
-    grok: {
-      label: 'xAI (Grok)', style: 'openai', baseUrl: 'https://api.x.ai/v1',
-      model: 'grok-2-latest', keyless: false, editableBase: false,
-      hint: 'Key from console.x.ai. OpenAI-compatible endpoint.'
-    },
-    openai: {
-      label: 'OpenAI', style: 'openai', baseUrl: 'https://api.openai.com/v1',
-      model: 'gpt-4o-mini', keyless: false, editableBase: true,
-      hint: 'Key from platform.openai.com. Direct browser calls can be blocked by CORS; a gateway or proxy may be needed.'
-    },
-    ollama: {
-      label: 'Ollama (local, no key)', style: 'openai', baseUrl: 'http://localhost:11434/v1',
-      model: 'llama3.1', keyless: true, editableBase: true,
-      hint: 'Runs on your machine, no key needed. Start Ollama with OLLAMA_ORIGINS="*" so the browser may call it. A page served over https (e.g. GitHub Pages) cannot reach http://localhost — open a local copy over http for Ollama.'
-    },
-    custom: {
-      label: 'OpenAI-compatible (custom)', style: 'openai', baseUrl: 'https://api.openai.com/v1',
-      model: '', keyless: false, editableBase: true,
-      hint: 'Any OpenAI-compatible endpoint (Azure, LM Studio, a gateway). Set the Base URL and model.'
-    }
-  };
-  function providerOf(id) { return PROVIDERS[id] || PROVIDERS.openai; }
 
   var cache = null;
 
   function getConfig() {
     if (cache) return Promise.resolve(cache);
-    if (!SPF.store) { cache = Object.assign({}, DEFAULT); return Promise.resolve(cache); }
-    return SPF.store.getSetting('llm', null).then(function (v) {
+    if (!GCX.store) { cache = Object.assign({}, DEFAULT); return Promise.resolve(cache); }
+    return GCX.store.getSetting('llm', null).then(function (v) {
       cache = Object.assign({}, DEFAULT, v || {});
       return cache;
     });
@@ -100,13 +52,10 @@
 
   function setConfig(cfg) {
     cache = Object.assign({}, DEFAULT, cfg || {});
-    return SPF.store ? SPF.store.setSetting('llm', cache) : Promise.resolve(cache);
+    return GCX.store ? GCX.store.setSetting('llm', cache) : Promise.resolve(cache);
   }
 
-  function isEnabled() {
-    if (!cache || !cache.enabled) return false;
-    return !!(cache.apiKey || providerOf(cache.provider).keyless);
-  }
+  function isEnabled() { return !!(cache && cache.enabled && cache.apiKey); }
 
   function extractJson(text) {
     if (!text) return null;
@@ -122,67 +71,37 @@
     return null;
   }
 
-  // Low-level completion. Returns plain text. Throws on failure. Routes by the
-  // selected provider's request style.
+  // Low-level completion. Returns plain text. Throws on failure.
   function complete(prompt, opts) {
     opts = opts || {};
     return getConfig().then(function (cfg) {
-      var prov = providerOf(cfg.provider);
-      var key = (cfg.apiKey || '').trim();
-      if (!prov.keyless && !key) throw new Error('No API key configured.');
-      var model = (cfg.model || '').trim() || prov.model;
-      if (!model) throw new Error('No model set for this provider.');
-      var system = opts.system || 'You are a careful research-development analyst.';
-      var maxTokens = opts.maxTokens || 1024;
-      var temperature = opts.temperature != null ? opts.temperature : 0.4;
-      var base = (cfg.baseUrl && cfg.baseUrl.trim() ? cfg.baseUrl.trim() : prov.baseUrl).replace(/\/+$/, '');
-
-      if (prov.style === 'anthropic') {
-        return fetch(base + '/messages', {
+      if (!cfg.apiKey) throw new Error('No API key configured.');
+      if (cfg.provider === 'openai') {
+        var base = cfg.baseUrl && cfg.baseUrl.trim() ? cfg.baseUrl.replace(/\/+$/, '') : 'https://api.openai.com/v1';
+        return fetch(base + '/chat/completions', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': key,
-            'anthropic-version': '2023-06-01',
-            'anthropic-dangerous-direct-browser-access': 'true'
-          },
-          body: JSON.stringify({ model: model, max_tokens: maxTokens, system: system, messages: [{ role: 'user', content: prompt }] })
-        }).then(handle).then(function (j) { return (j.content || []).map(function (b) { return b.text || ''; }).join(''); });
-      }
-
-      if (prov.style === 'gemini') {
-        var url = base + '/models/' + encodeURIComponent(model) + ':generateContent?key=' + encodeURIComponent(key);
-        return fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + cfg.apiKey },
           body: JSON.stringify({
-            systemInstruction: { parts: [{ text: system }] },
-            contents: [{ role: 'user', parts: [{ text: prompt }] }],
-            generationConfig: { maxOutputTokens: maxTokens, temperature: temperature }
+            model: cfg.model, max_tokens: opts.maxTokens || 1024, temperature: opts.temperature != null ? opts.temperature : 0.4,
+            messages: [{ role: 'system', content: opts.system || 'You are a careful research-development analyst.' }, { role: 'user', content: prompt }]
           })
-        }).then(handle).then(function (j) {
-          var c = (j.candidates || [])[0];
-          var parts = (c && c.content && c.content.parts) || [];
-          return parts.map(function (p) { return p.text || ''; }).join('');
-        });
+        }).then(handle).then(function (j) { return j.choices[0].message.content; });
       }
-
-      // Default: OpenAI-compatible /chat/completions (OpenAI, Grok, Groq,
-      // OpenRouter, Ollama, custom gateways).
-      var headers = { 'Content-Type': 'application/json' };
-      if (key) headers['Authorization'] = 'Bearer ' + key;
-      if (cfg.provider === 'openrouter') { headers['HTTP-Referer'] = 'https://scholar-partner-finder.app'; headers['X-Title'] = 'Scholar Partner Finder'; }
-      return fetch(base + '/chat/completions', {
+      // Default: Anthropic Messages API.
+      return fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
-        headers: headers,
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': cfg.apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
         body: JSON.stringify({
-          model: model, max_tokens: maxTokens, temperature: temperature,
-          messages: [{ role: 'system', content: system }, { role: 'user', content: prompt }]
+          model: cfg.model, max_tokens: opts.maxTokens || 1024,
+          system: opts.system || 'You are a careful research-development analyst.',
+          messages: [{ role: 'user', content: prompt }]
         })
-      }).then(handle).then(function (j) {
-        var ch = (j.choices || [])[0];
-        return (ch && ch.message && ch.message.content) || '';
-      });
+      }).then(handle).then(function (j) { return (j.content || []).map(function (b) { return b.text || ''; }).join(''); });
     });
   }
 
@@ -221,7 +140,7 @@
   function richTopics(members, rfpText, localTopics) {
     if (!isEnabled()) return Promise.reject(new Error('LLM layer is disabled.'));
     var roster = members.map(function (m) {
-      var caps = SPF.extract ? SPF.extract.groupCapabilities(m) : { method: [], discipline: [], theme: [] };
+      var caps = GCX.extract ? GCX.extract.groupCapabilities(m) : { method: [], discipline: [], theme: [] };
       return '- ' + (m.name || 'Scholar') + ': ' +
         (caps.discipline || []).map(function (c) { return c.term; }).slice(0, 3).join(', ') + ' | ' +
         (caps.method || []).map(function (c) { return c.term; }).slice(0, 5).join(', ') +
@@ -240,22 +159,72 @@
       });
   }
 
+  // Guidance on roster-level capacity gaps: for each unmet RFP requirement,
+  // suggest concretely how to close it (a type of external partner, or what
+  // a targeted hire's expertise should look like). Only the gap terms and the
+  // RFP text are sent, same privacy footprint as richTopics above; no CV text.
+  function explainGaps(gaps, rfpText) {
+    if (!isEnabled()) return Promise.reject(new Error('LLM layer is disabled.'));
+    if (!gaps || !gaps.length) return Promise.resolve([]);
+    var list = gaps.slice(0, 10).map(function (g) { return '- ' + (g.term || g); }).join('\n');
+    var prompt = 'A research roster was scored against a funding opportunity. These requirements are NOT covered by ' +
+      'anyone currently in the roster:\n' + list +
+      (rfpText ? '\n\nOpportunity context:\n' + rfpText.slice(0, 3000) : '') +
+      '\n\nFor each uncovered requirement, suggest in two sentences how a research office might realistically close it: ' +
+      'the kind of external partner or collaborator to seek, or what a targeted hire\'s expertise should look like. Be ' +
+      'concrete rather than generic. Return JSON: an array of objects with keys "title" (the requirement) and "detail" ' +
+      '(the suggestion), one per requirement, in the order given.';
+    return complete(prompt, { system: 'You are a research-development officer advising on how to close specific capability gaps.', maxTokens: 1000, temperature: 0.4 })
+      .then(function (txt) {
+        var j = extractJson(txt);
+        return Array.isArray(j) ? j.filter(function (x) { return x && x.title; }) : [];
+      });
+  }
+
+  // Rationale for a scholar's top-ranked Find Funding matches: only the
+  // scholar's grouped capabilities (never raw CV text) plus the public
+  // opportunity text are sent, so no extra consent beyond the general AI
+  // toggle is required, matching richTopics's privacy footprint.
+  function explainMatches(profile, ranked, keywords) {
+    if (!isEnabled()) return Promise.reject(new Error('LLM layer is disabled.'));
+    if (!ranked || !ranked.length) return Promise.resolve([]);
+    var caps = GCX.extract ? GCX.extract.groupCapabilities(profile) : { method: [], discipline: [] };
+    var capLine = (caps.discipline || []).map(function (c) { return c.term; }).slice(0, 3).join(', ') + '; methods: ' +
+      (caps.method || []).map(function (c) { return c.term; }).slice(0, 6).join(', ');
+    var top = ranked.slice(0, 5);
+    var oppList = top.map(function (r, i) {
+      var o = r.opportunity;
+      return (i + 1) + '. "' + o.title + '" (' + (o.agency || 'unknown agency') + ', closes ' + (o.closeDate || 'unknown') + '): ' +
+        (o.text || '').slice(0, 800);
+    }).join('\n\n');
+    var prompt = 'A scholar has this expertise: ' + capLine + ' (searched using the terms: ' + (keywords || []).join(', ') + ').\n\n' +
+      'Here are candidate funding opportunities, already ranked by an automated topical match:\n\n' + oppList +
+      '\n\nFor each opportunity, in order, write two sentences: whether it is a strong fit and why, and one concrete idea ' +
+      'for how this scholar could frame a proposal to it. Return JSON: an array of objects with keys "title" (matching the ' +
+      'opportunity title given) and "detail", in the same order as given.';
+    return complete(prompt, { system: 'You are a research-development officer helping a scholar decide which funding calls to pursue.', maxTokens: 1200, temperature: 0.5 })
+      .then(function (txt) {
+        var j = extractJson(txt);
+        return Array.isArray(j) ? j.filter(function (x) { return x && x.title; }) : [];
+      });
+  }
+
   function testConnection() {
     return complete('Reply with the single word: ok', { maxTokens: 16, temperature: 0 })
       .then(function (t) { return { ok: true, text: (t || '').trim() }; });
   }
 
-  SPF.llm = {
+  GCX.llm = {
     DEFAULT: DEFAULT,
-    PROVIDERS: PROVIDERS,
-    providerOf: providerOf,
     getConfig: getConfig,
     setConfig: setConfig,
     isEnabled: isEnabled,
     complete: complete,
     enhanceProfile: enhanceProfile,
     richTopics: richTopics,
+    explainGaps: explainGaps,
+    explainMatches: explainMatches,
     testConnection: testConnection,
     _extractJson: extractJson
   };
-})(typeof window !== 'undefined' ? (window.SPF = window.SPF || {}) : (globalThis.SPF = globalThis.SPF || {}));
+})(typeof window !== 'undefined' ? (window.GCX = window.GCX || {}) : (globalThis.GCX = globalThis.GCX || {}));

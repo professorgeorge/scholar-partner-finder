@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Scholar Partner Finder</title>
-  <meta name="description" content="Explore research complementarities and assemble RFP-ready teams from scholars' CVs. Local, private, self-contained." />
-  <meta name="theme-color" content="#5b4fe0" />
+  <title>Grant Crosswalk</title>
+  <meta name="description" content="Find complementary research collaborators and build RFP-ready teams from scholars' CVs. Local, private, self-contained." />
+  <meta name="theme-color" content="#0f766e" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
@@ -15,23 +15,19 @@
 <div class="app">
   <header class="topbar">
     <div class="brand">
-      <div class="logo"><img src="icons/icon.svg" alt="Scholar Partner Finder logo" width="32" height="32" /></div>
-      <div>Scholar Partner Finder<small>Complementarity &amp; RFP team-building &middot; runs entirely on your device</small></div>
+      <div class="logo">GX</div>
+      <div>Grant Crosswalk<small>Match capacity to funding, both ways &middot; runs entirely on your device</small></div>
     </div>
     <nav class="nav" id="nav">
       <button data-view="rfp" class="active">RFP Talent Search</button>
       <button data-view="roster">Roster</button>
       <button data-view="team">Team Explorer</button>
+      <button data-view="funding">Find Funding</button>
       <button data-view="settings">Settings</button>
     </nav>
     <div class="spacer"></div>
-    <div class="project-ctl">
-      <select id="projectSelect" title="Active project" aria-label="Active project"></select>
-      <button class="icon-btn" id="newProjectBtn" title="Create a new project">+ New</button>
-    </div>
     <span class="roster-count" id="rosterCount">0 scholars</span>
-    <button class="icon-btn" id="helpBtn" title="How this works" aria-label="Help">?</button>
-    <button class="icon-btn" id="themeToggle" title="Toggle light/dark" aria-label="Toggle light or dark theme">◐</button>
+    <button class="icon-btn" id="themeToggle" title="Toggle light/dark">◐</button>
   </header>
 
   <main class="main">
@@ -65,7 +61,12 @@
           <p class="hint" style="margin-top:10px" id="rfpRosterHint"></p>
         </div>
 
-        <div id="rfpResults"><!-- guided empty state rendered by app.js --></div>
+        <div id="rfpResults">
+          <div class="empty card pad">
+            <div class="big">🎯</div>
+            <p><strong>Rank your scholars against an opportunity.</strong><br>Add CVs to your roster, paste an RFP, and get an explainable shortlist, a coverage-maximising team, capacity gaps, and collaboration topics.</p>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -104,7 +105,6 @@
 
         <div class="card">
           <div class="section-title" style="padding:16px 18px 0"><h2>Roster</h2><span class="sub" id="rosterSub"></span></div>
-          <div style="padding:0 18px 4px"><input type="search" id="rosterSearch" placeholder="Search scholars by name, affiliation, or capability" aria-label="Search roster" /></div>
           <div id="rosterList"></div>
         </div>
       </div>
@@ -136,29 +136,52 @@
       </div>
     </section>
 
-    <!-- ============ SETTINGS ============ -->
-    <section class="view" id="view-settings">
-      <div class="card pad" style="margin-bottom:16px">
-        <div class="section-title"><h2>Projects</h2><span class="sub">Each project keeps its own roster, isolated from the others.</span></div>
-        <p class="hint" style="margin-top:-6px">Uploaded CVs belong to the project shown in the top bar. The bundled demo data lives in its own sample project and never mixes with your real work. Switch or create projects from the top bar or here.</p>
-        <div id="projectsList" class="proj-list"></div>
-        <div class="btn-row" style="margin-top:12px">
-          <button class="btn small" id="newProjectBtn2">New project</button>
-          <button class="btn secondary small" id="renameProjectBtn">Rename current</button>
-          <button class="btn danger small" id="deleteProjectBtn">Delete current</button>
+    <!-- ============ FIND FUNDING (single scholar vs open RFPs) ============ -->
+    <section class="view" id="view-funding">
+      <div class="grid side">
+        <div class="card pad">
+          <div class="section-title"><h2>Find funding</h2></div>
+          <p class="hint" style="margin-top:-8px">Take one scholar's profile and search Grants.gov for open or forecasted opportunities that match it &mdash; the reverse of RFP Talent Search: one CV against many solicitations, ranked the same explainable way.</p>
+          <label class="field">
+            <span>Scholar</span>
+            <select id="fundingScholarSelect"></select>
+          </label>
+          <p class="hint" style="margin:-6px 0 8px">Or use a CV that isn't in your roster:</p>
+          <label class="field">
+            <span>Paste a CV (optional, overrides the selection above)</span>
+            <textarea id="fundingPasteCv" placeholder="Paste CV text..." style="min-height:80px"></textarea>
+          </label>
+          <div class="divider"></div>
+          <label class="field"><span>Agency filter (optional, e.g. NSF, NIH, DOE)</span><input type="text" id="fundingAgency" placeholder="Leave blank to search all agencies"></label>
+          <label class="small" style="display:flex;gap:8px;align-items:flex-start;margin-bottom:12px"><input type="checkbox" id="fundingOpenOnly" checked style="width:auto;margin-top:3px"><span>Only open or forecasted opportunities</span></label>
+          <button class="btn" id="fundingSearchBtn" style="width:100%">Search Grants.gov</button>
+          <p class="hint" style="margin-top:10px" id="fundingHint"></p>
+        </div>
+
+        <div id="fundingResults">
+          <div class="empty card pad">
+            <div class="big">🔎</div>
+            <p><strong>Match a scholar to open funding calls.</strong><br>Pick (or paste) a CV, then search. This sends only that scholar's top research terms, never their CV text, to Grants.gov's public API &mdash; and only once you turn the feature on in Settings.</p>
+          </div>
         </div>
       </div>
+    </section>
+
+    <!-- ============ SETTINGS ============ -->
+    <section class="view" id="view-settings">
       <div class="grid two">
         <div class="card pad">
           <div class="section-title"><h2>Optional AI layer</h2><span class="badge amber" id="llmBadge">Off</span></div>
-          <p class="hint" style="margin-top:-6px">The app works fully without this. When enabled, it can improve tag extraction and write richer collaboration proposals. Several providers offer a free tier (Google Gemini, Groq, OpenRouter), and you can run a model locally with Ollama and no key at all. Your key is stored only in this browser and is sent only to the provider you choose.</p>
+          <p class="hint" style="margin-top:-6px">The app works fully without this. When enabled, it can improve tag extraction and write richer collaboration proposals using <em>your own</em> API key. Your key is stored only in this browser and is sent only to the provider you choose.</p>
           <label class="field"><span>Provider</span>
-            <select id="llmProvider" aria-describedby="llmProviderHint"></select>
+            <select id="llmProvider">
+              <option value="anthropic">Anthropic (Claude)</option>
+              <option value="openai">OpenAI-compatible</option>
+            </select>
           </label>
-          <p class="hint" id="llmProviderHint" style="margin-top:-6px;margin-bottom:10px"></p>
-          <label class="field"><span>API key</span><input type="password" id="llmKey" placeholder="Paste your API key" autocomplete="off"><span class="hint" id="llmKeyNote"></span></label>
-          <label class="field"><span>Model</span><input type="text" id="llmModel" placeholder="model name"></label>
-          <label class="field" id="baseUrlField" hidden><span>Base URL</span><input type="text" id="llmBaseUrl" placeholder="https://api.openai.com/v1"></label>
+          <label class="field"><span>API key</span><input type="password" id="llmKey" placeholder="Paste your API key" autocomplete="off"></label>
+          <label class="field"><span>Model</span><input type="text" id="llmModel" placeholder="e.g. claude-3-5-haiku-latest"></label>
+          <label class="field" id="baseUrlField" hidden><span>Base URL (OpenAI-compatible)</span><input type="text" id="llmBaseUrl" placeholder="https://api.openai.com/v1"></label>
           <label class="small" style="display:flex;gap:8px;align-items:flex-start;margin-bottom:10px"><input type="checkbox" id="llmEnabled" style="width:auto;margin-top:3px"><span>Enable the AI layer</span></label>
           <label class="small" style="display:flex;gap:8px;align-items:flex-start;margin-bottom:12px"><input type="checkbox" id="llmAllowCv" style="width:auto;margin-top:3px"><span>Allow sending CV text for enhanced extraction (transmits CV content to your provider)</span></label>
           <div class="btn-row">
@@ -166,6 +189,26 @@
             <button class="btn secondary small" id="llmTestBtn">Test connection</button>
           </div>
           <p class="hint" id="llmStatus" style="margin-top:10px"></p>
+        </div>
+
+        <div class="card pad">
+          <div class="section-title"><h2>Live funding search</h2><span class="badge amber" id="fundingBadge">Off</span></div>
+          <p class="hint" style="margin-top:-6px">Off by default. When enabled, the Find Funding tab sends a scholar's top research terms &mdash; not their CV text &mdash; to Grants.gov's public search API to look up matching open opportunities. Results are cached on this device to avoid repeat queries.</p>
+          <label class="small" style="display:flex;gap:8px;align-items:flex-start;margin-bottom:12px"><input type="checkbox" id="fundingEnabled" style="width:auto;margin-top:3px"><span>Enable live funding search (Grants.gov)</span></label>
+          <label class="field"><span>Search terms per query (top N distinctive terms)</span>
+            <div class="range"><input type="range" id="fundingMaxKw" min="1" max="8" value="4"><span class="val" id="fundingMaxKwV">4</span></div>
+          </label>
+          <label class="field"><span>Results requested per term</span>
+            <div class="range"><input type="range" id="fundingRows" min="5" max="50" value="20" step="5"><span class="val" id="fundingRowsV">20</span></div>
+          </label>
+          <label class="field"><span>Local relay URL (optional)</span><input type="text" id="fundingProxyUrl" placeholder="e.g. http://127.0.0.1:8787, if your browser blocks the direct call"></label>
+          <div class="btn-row">
+            <button class="btn small" id="fundingSaveBtn">Save</button>
+            <button class="btn secondary small" id="fundingTestBtn">Test connection</button>
+            <button class="btn secondary small" id="fundingClearCacheBtn">Clear cached results</button>
+          </div>
+          <p class="hint" id="fundingStatus" style="margin-top:10px"></p>
+          <p class="hint" style="margin-top:10px">This app has no server of its own, so this call is made directly from your browser. If your browser blocks it (a cross-origin restriction), the Find Funding tab falls back to a link that opens grants.gov's own search in a new tab, with the same terms, so the feature degrades rather than silently failing.</p>
         </div>
 
         <div class="card pad">
@@ -178,17 +221,12 @@
           <div class="btn-row"><button class="btn secondary small" id="themeToggle2">Toggle light / dark</button></div>
           <div class="divider"></div>
           <h3 class="small" style="margin-bottom:4px">About</h3>
-          <p class="hint">Scholar Partner Finder is a self-contained progressive web app. All CV parsing and analysis run locally in your browser; nothing is uploaded unless you explicitly enable the optional AI layer. Work is organized into projects, each with its own isolated roster, and the bundled demo data lives in its own sample project. Install it from your browser to run it offline. Its outputs are aids to human judgment, not advice or decisions; see the credit and disclaimer at the foot of the page.</p>
+          <p class="hint">Grant Crosswalk is a self-contained progressive web app. All CV parsing and analysis run locally in your browser; nothing is uploaded unless you explicitly enable the optional AI layer. Built as an installable PWA: use your browser's Install option to add it to your machine and run it offline.</p>
         </div>
       </div>
     </section>
 
   </main>
-
-  <footer class="appfoot">
-    <p class="credit">Conceptualized and developed by <a href="https://www.linkedin.com/in/beingbabu/" target="_blank" rel="noopener noreferrer">Professor Babu George</a>.</p>
-    <p class="disclaimer">Provided as is, without warranties of any kind, express or implied. All outputs are heuristic aids intended to support human judgment, not professional, legal, financial, or employment advice, and not decisions or recommendations. Any reliance is at your own risk; the author accepts no responsibility or liability for any decision, action, outcome, or damages arising from use of this tool. Verify all results independently before relying on them.</p>
-  </footer>
 </div>
 
 <!-- modal -->
@@ -200,15 +238,6 @@
   </div>
 </div>
 
-<!-- help modal (populated by app.js) -->
-<div class="modal-backdrop" id="helpBackdrop">
-  <div class="modal">
-    <header><h3>How Scholar Partner Finder works</h3><button class="icon-btn" id="helpClose" aria-label="Close">✕</button></header>
-    <div class="body" id="helpBody"></div>
-    <footer><button class="btn" id="helpDone">Got it</button></footer>
-  </div>
-</div>
-
 <div class="toast-wrap" id="toastWrap"></div>
 
 <script src="js/lexicon.js"></script>
@@ -217,6 +246,7 @@
 <script src="js/engine.js"></script>
 <script src="js/store.js"></script>
 <script src="js/llm.js"></script>
+<script src="js/opportunities.js"></script>
 <script src="js/samples-data.js"></script>
 <script src="js/app.js"></script>
 <script>

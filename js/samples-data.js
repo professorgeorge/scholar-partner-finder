@@ -1,5 +1,5 @@
 /* Auto-generated sample data so the demo loads without any network or file access. */
-(function (SPF) { SPF.samples = {
+(function (GCX) { GCX.samples = {
  "scholars": [
   {
    "filename": "cv_ada_nwosu.txt",
@@ -35,4 +35,4 @@
   }
  ],
  "rfp": "National Science Foundation\nSmart and Connected Communities (S&CC)\nProgram Solicitation: AI-Enabled Water Sustainability and Climate Resilience for Underserved Communities\n\nSynopsis\nThe National Science Foundation invites proposals for integrative, use-inspired research\nthat improves water sustainability and climate resilience in underserved communities.\nSuccessful projects will pair advanced computing with environmental science and genuine\ncommunity engagement.\n\nAreas of Interest\nProposals should combine several of the following capabilities:\n\n- Artificial intelligence and machine learning for environmental data, including deep\n  learning and natural language processing of policy and community input.\n- Water resources, hydrology, drought, and water security, especially in arid regions.\n- Sensor networks, the Internet of Things, and embedded systems for real-time\n  environmental monitoring.\n- Geospatial analysis, remote sensing, and climate data for decision support.\n- Community-based participatory research, stakeholder engagement, and attention to\n  health equity in underserved populations.\n- Economic and policy analysis, including program evaluation and cost-benefit analysis\n  of proposed interventions.\n- Membrane desalination and water treatment technologies for reuse.\n- Integration of indigenous knowledge systems in environmental decision-making.\n\nBroader Impacts\nProjects must broaden participation and include a credible plan for community\npartnerships, workforce development, and translation of results into practice.\n\nAwards\nAnticipated total funding of $3,000,000 for approximately four awards. Interdisciplinary\nteams spanning computing, engineering, environmental science, health, and the social\nsciences are strongly encouraged.\n"
-}; })(typeof window!=='undefined'?(window.SPF=window.SPF||{}):(globalThis.SPF=globalThis.SPF||{}));
+}; })(typeof window!=='undefined'?(window.GCX=window.GCX||{}):(globalThis.GCX=globalThis.GCX||{}));

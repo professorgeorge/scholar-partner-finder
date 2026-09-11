@@ -1,69 +1,50 @@
-# Scholar Partner Finder
+# Grant Crosswalk
 
-A self-contained, privacy-first web application that reads scholars' CVs, looks
-for complementarities among them, and matches them to a research topic or a
-funding opportunity. It runs entirely in the browser. There is no server and no
-account, and no data leaves the device unless you deliberately turn on the
-optional AI layer.
+A self-contained, privacy-first web application that reads scholars' CVs, finds
+genuine complementarities among them, and matches them to a research topic or a
+funding opportunity — in both directions. It runs entirely in the browser. No
+server, no account, no data leaves the device unless you deliberately turn on
+the optional AI layer.
 
-The tool is meant to structure a decision, not to make it. Every figure it
-reports is an aid to the judgment of someone who knows the people involved, and
-the design goes to some length to keep that judgment in the loop rather than to
-replace it.
+The tool answers four questions that recur across a research university:
 
-It addresses three questions that recur across a research university:
-
-1. **Given this RFP, who might respond, and as what team?**
+1. **Given this RFP, who on our faculty should respond, and as what team?**
    The primary workflow. Paste a solicitation or a topic; the app ranks your
    roster, assembles a coverage-maximising team, and shows what each member
    contributes and what the opportunity still leaves uncovered.
-2. **Where are the capability gaps?** The tool names the RFP requirements that
-   no one in your roster appears to address, which is the kind of information a
-   sponsored-programs office can use when weighing an internal team against an
-   external partner or a targeted hire.
-3. **Who might work well with whom, regardless of any single RFP?** The Team
-   Explorer surfaces complementary pairs and the connectors who can help hold an
+2. **Where are our capability gaps?** The tool names the RFP requirements that
+   no one in your roster can address, which is exactly the information a
+   sponsored-programs office needs to decide between an internal team, an
+   external partner, or a targeted hire.
+3. **Who works well with whom, regardless of any single RFP?** The Team
+   Explorer surfaces complementary pairs and the connectors who can hold an
    interdisciplinary team together.
+4. **Given this scholar, what should they apply to?** The reverse of the
+   primary workflow: Find Funding takes one CV and searches Grants.gov for
+   open or forecasted opportunities that match it, ranked and explained the
+   same way. This is the one feature that talks to the network, and it is off
+   until you turn it on; see "Find Funding" below.
 
 ## Who it is for
 
 For an individual scholar and a few collaborators, it turns a folder of CVs into
-concrete starting points for collaboration. For a graduate school dean or a vice
-president for research, it can become a standing aid: build a roster of faculty
-CVs once, and each new RFP becomes a fast, explainable query with an
-accompanying gap analysis.
+concrete, fundable collaboration ideas. For a graduate school dean or a vice
+president for research, it becomes a standing capability: build the roster of
+faculty CVs once, and every new RFP becomes a fast, explainable query with a
+defensible shortlist and a gap analysis attached.
 
-The design is deliberate on three points. Sensitive faculty documents stay on
-the machine, so there is no data transfer to clear before use. There is no
-infrastructure to procure or maintain. And every score decomposes into the
+The value proposition is deliberate. Sensitive faculty documents never leave the
+machine, so there is no data-governance obligation to clear before use. There is
+no infrastructure to procure or maintain. And every score decomposes into the
 specific terms that produced it, so a shortlist can be explained to a committee
-rather than merely asserted. None of this makes the output authoritative; it
-makes the output inspectable.
-
-## Projects
-
-Work is organized into projects (workspaces). Each project holds its own roster,
-kept separate from every other project, so a search for one opportunity never
-draws on scholars you added for another, and one department's roster does not
-mix with another's. A project switcher sits in the top bar, and the Settings
-tab lets you create, open, rename, and delete projects. Deleting a project
-removes only that project's scholars; the others are untouched.
-
-The bundled demo data lives in its own **Sample data** project, marked as a
-demo. Loading the samples creates and switches to that project, so the example
-scholars never land in a roster you are building for real work. The demo project
-does not accept your own uploads; if you try to add a CV while it is active, the
-app offers to create a real project instead.
-
-If you used an earlier version, your existing roster is preserved on first
-launch and placed in a project called **My first project**.
+rather than asserted.
 
 ## Running it
 
-The app is a set of static files. There are two ways to use it.
+The app is a set of static files. Two ways to use it:
 
-The fuller way is to serve the folder over a local web server, which enables
-offline installation and the service worker:
+The quickest full-featured way is to serve the folder over a local web server,
+which enables offline installation and the service worker:
 
 ```
 cd scholar-partner-finder
@@ -74,69 +55,107 @@ Then open `http://localhost:8000` and, if you want it as a desktop or mobile
 app, use your browser's **Install** option. Once installed it works offline.
 
 You can also open `index.html` directly by double-clicking it. Parsing and
-analysis work this way; only the installable and offline service worker is
+analysis work this way; only the installable/offline service worker is
 unavailable from a `file://` origin.
 
 To try it immediately, open the Roster tab and choose **Load 8 sample
-scholars** (this populates the demo project), then go to RFP Talent Search and
-click **Analyze**.
+scholars**, then go to RFP Talent Search and click **Analyze**.
 
 ## Using it
 
-**Roster.** Add CVs to the active project by dropping files, choosing files, or
-choosing a folder. The folder picker reads every CV in a directory, including a
-locally synced OneDrive or shared-drive folder, without any cloud credentials.
-You can also paste a single CV as text. A search box filters the roster by name,
-affiliation, or capability, and importing the same person twice by name is
-skipped rather than duplicated. Because automated reading of a CV is never
-perfect, every scholar is fully editable: open a scholar to correct the name and
+**Roster.** Add CVs by dropping files, choosing files, or choosing a folder.
+The folder picker reads every CV in a directory, including a locally synced
+OneDrive or shared-drive folder, without any cloud credentials. You can also
+paste a single CV as text. Because automated reading of a CV is never perfect,
+every scholar is fully editable: open a scholar to correct the name and
 affiliation, remove any mis-detected capability, and add tags the parser missed.
 Curated tags are weighted strongly in the analysis.
 
 **RFP Talent Search.** Paste the opportunity, adjust how much weight to place on
-topic relevance, recent activity, and funding record, set a team size, and
-analyze. You get an explainable ranking, a recommended team with per-member
+topic relevance versus recent activity versus funding record, set a team size,
+and analyze. You get an explainable ranking, a recommended team with per-member
 contributions and coverage and complementarity metrics, a capacity-gap list, and
-suggested collaboration topics. Three things keep you in control of the reading:
-
-- The **requirements** the tool extracted from the RFP are shown as editable
-  chips. You can remove a phrase that is really program boilerplate, add a
-  requirement the call implies but never spells out, and mark a requirement as a
-  must, which weights it more heavily. Relevance, coverage, and the gap analysis
-  all recompute from the set you approve.
-- A **coverage matrix** lays out each requirement against each chosen team
-  member, so you can see who addresses what, with the still-uncovered
-  requirements highlighted.
-- The full ranking lets you **pin** a scholar onto the team or **exclude** one,
-  and it notes, for a strong candidate left off, roughly how little new coverage
-  they would add and which member they most duplicate. These are the judgments
-  the model cannot make, such as availability or a prior collaboration, put back
-  in your hands.
-
-Results can be exported as a self-contained HTML report or as a CSV of the
-ranking.
+collaboration topics. Everything can be exported as a self-contained HTML report.
 
 **Team Explorer.** Independent of any RFP, this shows the most complementary
-pairs in the active project's roster, the bridge scholars who connect many
-others, and a greedy-assembled complementary team around an optional seed
-person.
+pairs in your roster, the bridge scholars who connect many others, and a
+greedy-assembled complementary team around an optional seed person. If the
+optional AI layer is enabled, its complementary-team mode can also draft
+richer collaboration proposals, the same feature RFP Talent Search offers.
 
-**Settings.** Manage projects, configure the optional AI layer, toggle enhanced
-PDF parsing, and export or import a project's roster as JSON for backup or
-transfer.
+**Find Funding.** Pick a scholar from your roster, or paste a CV that isn't in
+it, and search for open or forecasted federal funding opportunities that match
+their profile. This is the RFP Talent Search idea run in reverse: one scholar
+against many candidate opportunities, using the same TF-IDF/cosine engine, so
+matches are explained by the same shared terms rather than a bare score. It
+queries [Grants.gov's public search API](https://grants.gov/api/api-guide),
+which is documented as requiring no login and no API key, deliberately in
+preference to scraping the grants.gov website. It is **off by default**; see
+"Live funding search" in Settings before it will do anything, and see the
+caveats below. If the optional AI layer is enabled, it can also draft a short
+fit rationale and proposal angle for the top-ranked matches.
+
+**Settings.** Configure the optional AI layer and the optional live funding
+search, toggle enhanced PDF parsing, and export or import your roster as JSON
+for backup or transfer.
+
+**The optional AI layer, everywhere it appears.** Off by default and
+bring-your-own-key throughout. Roster: improves tag extraction and adds a
+one-sentence profile summary (this is the only path that sends raw CV text,
+gated by its own separate consent checkbox). RFP Talent Search and Team
+Explorer: drafts richer, less templated collaboration-topic proposals for an
+assembled team, and can suggest concretely how to close a specific capacity
+gap (what kind of partner or hire would fill it). Find Funding: drafts a fit
+rationale for the top-ranked opportunities. Everywhere except the CV-text
+path, only capability-level data (tags, gap terms, public opportunity text)
+is sent, never the CV itself.
 
 ## Data and privacy
 
-All CV text, extracted profiles, projects, and rosters are stored locally in the
-browser's IndexedDB. Nothing is transmitted anywhere by default. A roster export
-covers only the active project and strips any stored API key, and an import
-always lands in a new project rather than merging into an existing one. The
-optional AI layer is off until you enable it and sends data only to the provider
-endpoint you select. It supports several providers, including ones with a free
-tier (Google Gemini, Groq, OpenRouter), the Anthropic and OpenAI APIs, xAI Grok,
-any OpenAI-compatible endpoint, and a local model served by Ollama, which needs
-no key and keeps everything on your machine. Sending CV text for enhanced
-extraction requires a second, explicit consent checkbox.
+All CV text, extracted profiles, and your roster are stored locally in the
+browser's IndexedDB. Nothing is transmitted anywhere by default. The roster
+export deliberately strips any stored API key. The optional AI layer is off
+until you enable it, requires your own API key, and sends data only to the
+provider endpoint you select; sending CV text for enhanced extraction requires a
+second, explicit consent checkbox.
+
+## Find Funding: what it sends, and what can go wrong
+
+Turning on live funding search (Settings &rarr; Live funding search) changes
+the privacy story in one specific, bounded way: it sends a scholar's top few
+research terms &mdash; never their CV text &mdash; to Grants.gov's public
+`search2` API, and, for the strongest matches, a follow-up request for that
+opportunity's full synopsis text so the ranking has something more than a
+title to work with. Nothing else in the app makes a network call by default.
+
+Two things are worth knowing before you rely on it:
+
+- **This app has no server, and Grants.gov's API is not formally documented as
+  supporting arbitrary browser cross-origin requests.** The request is made
+  directly from your browser. If your browser blocks it, Find Funding shows a
+  plain error and a link that opens the same search on grants.gov itself in a
+  new tab, rather than failing silently. If you hit this consistently and want
+  the feature to work end to end, the fix that preserves the "nothing runs on
+  a server you don't control" design is a tiny local relay: run
+  `node tools/grants-proxy.js` alongside the app (see that file) and it will
+  simply forward the request from `localhost`, which browsers treat as same
+  machine, not a third party.
+- **The response schema is not pinned down by a formal, versioned spec.**
+  `js/opportunities.js` reads known field-name aliases and falls back to a
+  "longest plain-text field in the record" heuristic rather than assuming one
+  exact shape, so a field rename upstream degrades the feature rather than
+  breaking it, but the ranking is only as good as the text it recovers. An
+  opportunity marked "ranked on title only" in the results list means the
+  follow-up detail fetch didn't return a fuller synopsis; open the listing
+  itself before deciding it's a miss.
+
+NIH RePORTER and the NSF Award Search API were deliberately left out of this
+feature. Both are free, public, documented, no-key APIs, and would be
+reasonable to add for a different purpose (seeing who else works in a given
+area, based on what's actually been funded), but they return **awarded**
+projects, not open calls, so they don't answer "what should this scholar apply
+to." Folding them in here would blur a distinction the rest of this project is
+otherwise careful to keep separate.
 
 ## File formats
 
@@ -148,16 +167,15 @@ loads the pdf.js library from a CDN and therefore needs a network connection.
 
 ## How the analysis works
 
-In short: each scholar and the RFP are represented as concept vectors weighted
-by TF-IDF across the active project's roster, so distinctive expertise counts
+A short version: each scholar and the RFP are represented as concept vectors
+weighted by TF-IDF across your current roster, so distinctive expertise counts
 for more than vocabulary everyone shares. Relevance is the cosine similarity
 between a scholar and the opportunity. Team assembly maximises weighted coverage
 of the RFP's requirements with diminishing returns, which is the formal way to
 reward complementarity over redundancy; it is solved greedily. Coverage,
-complementarity, overlap, and interdisciplinarity are reported separately rather
-than collapsed into one opaque score. Because the weighting is computed across
-the roster you have loaded, all scores are comparative rather than absolute. The
-full reasoning, including the concept lexicon and the metric definitions, is in
+complementarity, overlap, and interdisciplinarity are always reported
+separately rather than collapsed into one opaque score. The full reasoning,
+including the concept lexicon and the metric definitions, is in
 [METHODOLOGY.md](METHODOLOGY.md).
 
 ## Project structure
@@ -168,9 +186,8 @@ css/styles.css          styles (light/dark, responsive)
 js/lexicon.js           curated academic lexicon and stopwords
 js/parse.js             CV parsing: PDF, DOCX (built-in), TXT/MD/RTF/HTML
 js/extract.js           CV text to structured, section-weighted profile
-js/engine.js            TF-IDF, relevance, requirement editing, team assembly,
-                        coverage matrix, gaps, topics
-js/store.js             IndexedDB persistence: projects, profiles, JSON export/import
+js/engine.js            TF-IDF, relevance, team assembly, gaps, topics
+js/store.js             IndexedDB persistence and JSON export/import
 js/llm.js               optional bring-your-own-key AI layer (off by default)
 js/samples-data.js      embedded demo scholars and RFP
 js/app.js               UI controller
@@ -186,43 +203,25 @@ test/                   Node engine harness and headless-browser smoke test
 Because the app is static, it can be hosted on any web server or intranet path,
 or distributed as a folder. Hosting it over HTTPS lets staff install it as a PWA
 and use it offline. No backend, database, or per-user configuration is required.
-If a group wants to share a roster, one person can export a project as JSON and
-others can import it; each import lands in its own project, so shared data stays
-distinct from local work.
+If a group wants a shared roster, one person can export the JSON and others can
+import it; the roster is portable by design.
 
 ## Tests
 
 ```
-node test/run.js            # engine: parsing, profiling, ranking, teams, gaps,
-                            #         requirement editing, coverage matrix, constraints
-node test/browser_smoke.js  # drives the real UI in headless Chromium,
-                            #         including project isolation
+node test/run.js            # engine: parsing, profiling, ranking, teams, gaps
+node test/browser_smoke.js  # drives the real UI in headless Chromium
 ```
 
 ## Limitations and honest caveats
 
 Extraction is heuristic. The lexicon is broad but finite, and phrase mining
-favours precision, so a novel term may be missed until you add it as a tag. PDF
-extraction is best-effort. The relevance and complementarity scores are useful
-for ranking and for structuring a decision; they are not a measure of a person's
-reputation, collegiality, availability, or fit, and they are not a substitute
-for the judgment of someone who knows the people involved. The tool is built to
-make its reasoning visible precisely so that such judgment can be applied to it,
-and it should be used that way.
+favours precision, so a genuinely novel term may be missed until you add it as a
+tag. PDF extraction is best-effort. The relevance and complementarity scores are
+useful for ranking and structuring a decision, not a substitute for the judgment
+of someone who knows the people involved. The tool is built to make its
+reasoning visible precisely so that judgment can be applied to it.
 
-## Credit
+## License
 
-Conceptualized and developed by Professor Babu George
-(https://www.linkedin.com/in/beingbabu/).
-
-## Disclaimer and license
-
-Provided as is, without warranties of any kind, express or implied, including
-but not limited to warranties of merchantability, fitness for a particular
-purpose, and non-infringement. All outputs are heuristic aids intended to
-support human judgment, and are not professional, legal, financial, or
-employment advice, nor decisions or recommendations. Any reliance on the tool or
-its outputs is at your own risk, and the author accepts no responsibility or
-liability for any decision, action, outcome, or damages arising from its use.
-Verify all results independently before relying on them. You may use, modify, and
-deploy the software, and you do so on these terms.
+Provided as-is for the author to use, modify, and deploy. No warranty.
