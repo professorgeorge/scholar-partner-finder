@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Grant Crosswalk</title>
-  <meta name="description" content="Find complementary research collaborators and build RFP-ready teams from scholars' CVs. Local, private, self-contained." />
+  <meta name="description" content="Match your researchers to funding opportunities and funding opportunities to your researchers &mdash; plus complementary team-building. Local, private, self-contained." />
   <meta name="theme-color" content="#0f766e" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
@@ -44,7 +44,6 @@
           </label>
           <div class="btn-row" style="margin-bottom:12px">
             <button class="btn secondary small" id="rfpUploadBtn">Upload RFP file</button>
-            <button class="btn ghost small" id="rfpSampleBtn">Use sample RFP</button>
           </div>
           <div class="divider"></div>
           <label class="field">
@@ -92,7 +91,6 @@
           </label>
           <div class="btn-row">
             <button class="btn small" id="addPasteBtn">Add from text</button>
-            <button class="btn ghost small" id="loadSamplesBtn">Load 8 sample scholars</button>
           </div>
           <div class="divider"></div>
           <div class="btn-row">
@@ -176,12 +174,17 @@
           <label class="field"><span>Provider</span>
             <select id="llmProvider">
               <option value="anthropic">Anthropic (Claude)</option>
-              <option value="openai">OpenAI-compatible</option>
+              <option value="openai">OpenAI</option>
+              <option value="gemini">Google Gemini</option>
+              <option value="grok">xAI (Grok)</option>
+              <option value="ollama">Ollama (local, no key needed)</option>
+              <option value="custom">Other (OpenAI-compatible)</option>
             </select>
           </label>
           <label class="field"><span>API key</span><input type="password" id="llmKey" placeholder="Paste your API key" autocomplete="off"></label>
           <label class="field"><span>Model</span><input type="text" id="llmModel" placeholder="e.g. claude-3-5-haiku-latest"></label>
-          <label class="field" id="baseUrlField" hidden><span>Base URL (OpenAI-compatible)</span><input type="text" id="llmBaseUrl" placeholder="https://api.openai.com/v1"></label>
+          <label class="field" id="baseUrlField" hidden><span>Base URL</span><input type="text" id="llmBaseUrl" placeholder="https://api.openai.com/v1"></label>
+          <p class="hint" id="llmProviderHint" style="margin:-4px 0 10px"></p>
           <label class="small" style="display:flex;gap:8px;align-items:flex-start;margin-bottom:10px"><input type="checkbox" id="llmEnabled" style="width:auto;margin-top:3px"><span>Enable the AI layer</span></label>
           <label class="small" style="display:flex;gap:8px;align-items:flex-start;margin-bottom:12px"><input type="checkbox" id="llmAllowCv" style="width:auto;margin-top:3px"><span>Allow sending CV text for enhanced extraction (transmits CV content to your provider)</span></label>
           <div class="btn-row">
@@ -227,6 +230,11 @@
     </section>
 
   </main>
+
+  <footer class="app-footer">
+    <p>Conceptualization and development: Professor Babu George.</p>
+    <p class="fine-print">This tool is provided "as is," without warranty of any kind, express or implied, including but not limited to warranties of accuracy, merchantability, or fitness for a particular purpose. It is intended to support &mdash; not replace &mdash; human judgment in funding, hiring, and research-partnership decisions. To the fullest extent permitted by law, the developer and any affiliated institution disclaim all liability for any loss, damage, or claim of any kind arising from use of this tool or reliance on its output.</p>
+  </footer>
 </div>
 
 <!-- modal -->
@@ -247,7 +255,6 @@
 <script src="js/store.js"></script>
 <script src="js/llm.js"></script>
 <script src="js/opportunities.js"></script>
-<script src="js/samples-data.js"></script>
 <script src="js/app.js"></script>
 <script>
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {

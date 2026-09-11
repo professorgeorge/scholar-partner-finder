@@ -78,15 +78,27 @@ async function main() {
   check(title === 'Grant Crosswalk', 'page title loaded: ' + title);
   check(await evalJs('typeof GCX!=="undefined" && !!GCX.engine'), 'GCX modules present in the browser');
 
-  // Load samples
-  await evalJs("document.getElementById('loadSamplesBtn').click()");
-  await sleep(600);
+  // Populate the roster the same way a real user would: paste each CV's text
+  // and click "Add from text". These CV fixtures are test-only (samples/) and
+  // are never shipped to or seen by a real user of the app.
+  const sampleDir = path.join(ROOT, 'samples');
+  const cvTexts = fs.readdirSync(sampleDir).filter(f => f.startsWith('cv_')).map(f => fs.readFileSync(path.join(sampleDir, f), 'utf8'));
+  const rfpFixtureText = fs.readFileSync(path.join(sampleDir, 'rfp_smart_communities.txt'), 'utf8');
+  await evalJs(`(async () => {
+    const texts = ${JSON.stringify(cvTexts)};
+    for (const t of texts) {
+      document.getElementById('pasteCv').value = t;
+      document.getElementById('addPasteBtn').click();
+      await new Promise(r => setTimeout(r, 120));
+    }
+  })()`);
+  await sleep(400);
   const count = await evalJs("document.getElementById('rosterCount').textContent");
-  check(/8 scholars/.test(count), 'loaded 8 sample scholars (' + count + ')');
+  check(/8 scholars/.test(count), 'added 8 scholars via the paste-CV flow (' + count + ')');
 
-  // Go to RFP view, ensure sample RFP populated, run analysis
+  // Go to RFP view, paste a sample RFP as a real user would, run analysis
   await evalJs("document.querySelector('[data-view=rfp]').click()");
-  await evalJs("document.getElementById('rfpText').value = GCX.samples.rfp");
+  await evalJs(`document.getElementById('rfpText').value = ${JSON.stringify(rfpFixtureText)}`);
   await evalJs("document.getElementById('analyzeBtn').click()");
   await sleep(600);
   const resText = await evalJs("document.getElementById('rfpResults').innerText");
@@ -133,6 +145,26 @@ async function main() {
     const hasManualLink = await evalJs("!!document.querySelector('#fundingResults a[href*=\"grants.gov\"]')");
     check(hasManualLink, 'fallback includes a manual grants.gov search link');
   }
+
+  // LLM provider dropdown: switching providers should auto-fill the base URL
+  // with that provider's default and update the key-field hint, without a
+  // real network call.
+  await evalJs("document.querySelector('[data-view=settings]').click()");
+  await sleep(150);
+  await evalJs("document.getElementById('llmProvider').value = 'gemini'; document.getElementById('llmProvider').dispatchEvent(new Event('change'))");
+  await sleep(100);
+  const geminiBaseUrl = await evalJs("document.getElementById('llmBaseUrl').value");
+  check(geminiBaseUrl === 'https://generativelanguage.googleapis.com/v1beta', `switching to Gemini auto-fills its base URL (got "${geminiBaseUrl}")`);
+  await evalJs("document.getElementById('llmProvider').value = 'ollama'; document.getElementById('llmProvider').dispatchEvent(new Event('change'))");
+  await sleep(100);
+  const ollamaKeyPlaceholder = await evalJs("document.getElementById('llmKey').placeholder");
+  check(/not required/i.test(ollamaKeyPlaceholder), 'switching to Ollama shows a "no key required" hint on the key field');
+  const ollamaBaseUrl = await evalJs("document.getElementById('llmBaseUrl').value");
+  check(ollamaBaseUrl === 'http://localhost:11434/v1', `switching to Ollama auto-fills its local base URL (got "${ollamaBaseUrl}")`);
+  await evalJs("document.getElementById('llmProvider').value = 'anthropic'; document.getElementById('llmProvider').dispatchEvent(new Event('change'))");
+  await sleep(100);
+  const baseUrlHiddenForAnthropic = await evalJs("document.getElementById('baseUrlField').hidden");
+  check(baseUrlHiddenForAnthropic === true, 'the base URL field hides again when switching back to Anthropic');
 
   // Roster edit modal opens
   await evalJs("document.querySelector('[data-view=roster]').click()");

@@ -166,6 +166,44 @@ async function main() {
 
   global.fetch = originalFetch;
 
+  // ---- 11. Multi-provider routing (Gemini / Grok / Ollama / custom) -----
+  // Captures the actual fetch call each provider preset produces, rather
+  // than trusting the preset table by inspection alone.
+  hr('AI layer: provider routing (Gemini, Grok, Ollama, custom)');
+  let captured = null;
+  function captureFetch() {
+    global.fetch = async (url, init) => {
+      captured = { url, headers: init.headers, body: JSON.parse(init.body) };
+      return { ok: true, json: async () => ({ choices: [{ message: { content: 'ok' } }] }) };
+    };
+  }
+
+  await GCX.llm.setConfig({ enabled: true, apiKey: 'gk', provider: 'gemini', model: '' }).catch(() => {});
+  captureFetch();
+  await GCX.llm.complete('hi');
+  assert(captured.url === 'https://generativelanguage.googleapis.com/v1beta/chat/completions', `gemini routes to its OpenAI-compatible endpoint (got ${captured.url})`);
+  assert(captured.headers.Authorization === 'Bearer gk', 'gemini call carries the configured key');
+  assert(captured.body.model === 'gemini-2.5-flash', 'gemini falls back to its preset default model when none is set');
+
+  await GCX.llm.setConfig({ enabled: true, apiKey: 'xk', provider: 'grok', model: 'grok-4-fast' }).catch(() => {});
+  captureFetch();
+  await GCX.llm.complete('hi');
+  assert(captured.url === 'https://api.x.ai/v1/chat/completions', `grok routes to api.x.ai (got ${captured.url})`);
+
+  await GCX.llm.setConfig({ enabled: true, apiKey: '', provider: 'ollama', model: 'llama3.2' }).catch(() => {});
+  assert(GCX.llm.isEnabled(), 'ollama reports enabled with no API key set, since it does not require one');
+  captureFetch();
+  await GCX.llm.complete('hi');
+  assert(captured.url === 'http://localhost:11434/v1/chat/completions', `ollama routes to the local default (got ${captured.url})`);
+  assert(/^Bearer /.test(captured.headers.Authorization), 'ollama still receives a placeholder Authorization header (harmlessly ignored by Ollama)');
+
+  await GCX.llm.setConfig({ enabled: true, apiKey: 'ok', provider: 'custom', model: 'local-model', baseUrl: 'http://10.0.0.5:8080/v1' }).catch(() => {});
+  captureFetch();
+  await GCX.llm.complete('hi');
+  assert(captured.url === 'http://10.0.0.5:8080/v1/chat/completions', `a custom baseUrl override is honored over any preset default (got ${captured.url})`);
+
+  global.fetch = originalFetch;
+
   hr(failures === 0 ? 'ALL CHECKS PASSED' : (failures + ' CHECK(S) FAILED'));
   process.exit(failures === 0 ? 0 : 1);
 }

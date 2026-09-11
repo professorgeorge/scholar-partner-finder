@@ -110,6 +110,18 @@ rationale for the top-ranked opportunities. Everywhere except the CV-text
 path, only capability-level data (tags, gap terms, public opportunity text)
 is sent, never the CV itself.
 
+**Providers.** Anthropic (Claude) has its own request format; every other
+option — OpenAI, Google Gemini, xAI's Grok, a locally-running Ollama, or any
+other OpenAI-compatible endpoint (Azure OpenAI, OpenRouter, vLLM, LM Studio,
+etc.) — is called through the same OpenAI-style `/chat/completions` request,
+since all of them now support it. Ollama needs no API key (it ignores
+whatever string is sent) and runs entirely on your machine, but note that
+Ollama's default CORS policy only allows `localhost` origins: if you're
+running this app locally too, it should just work; if you're using a copy of
+this app hosted elsewhere, Ollama will block it unless you set
+`OLLAMA_ORIGINS` to include that page's address.
+is sent, never the CV itself.
+
 ## Data and privacy
 
 All CV text, extracted profiles, and your roster are stored locally in the
@@ -222,6 +234,15 @@ useful for ranking and structuring a decision, not a substitute for the judgment
 of someone who knows the people involved. The tool is built to make its
 reasoning visible precisely so that judgment can be applied to it.
 
+## Acknowledgment
+
+Conceptualization and development: Professor Babu George.
+
 ## License
 
-Provided as-is for the author to use, modify, and deploy. No warranty.
+Provided as-is for the author to use, modify, and deploy. No warranty, express
+or implied. This tool is intended to support, not replace, human judgment in
+funding, hiring, and research-partnership decisions; to the fullest extent
+permitted by law, the developer and any affiliated institution disclaim
+liability for any loss, damage, or claim arising from its use or from
+decisions made in reliance on its output.

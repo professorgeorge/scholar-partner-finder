@@ -15,7 +15,6 @@ var SHELL = [
   './js/store.js',
   './js/llm.js',
   './js/opportunities.js',
-  './js/samples-data.js',
   './js/app.js',
   './manifest.webmanifest',
   './icons/icon.svg',

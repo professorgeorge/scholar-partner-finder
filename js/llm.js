@@ -1,7 +1,7 @@
 /*
  * llm.js — OPTIONAL enhancement layer. It ships disabled. The application is
- * fully functional without it; nothing here runs unless the user pastes their
- * own API key and turns the layer on in Settings.
+ * fully functional without it; nothing here runs unless the user configures
+ * a provider and turns the layer on in Settings.
  *
  * What it can add, when enabled, and where each shows up:
  *   - Cleaner structured extraction from messy CV text, plus a one-sentence
@@ -19,23 +19,45 @@
  * the sole exception, gated by its own separate "allow CV text" consent
  * checkbox in Settings.
  *
+ * Providers supported, and why there are only two code paths for six of them:
+ * Anthropic's Messages API has its own request/response shape, so it gets a
+ * dedicated branch. Every other provider listed here — OpenAI, Google Gemini,
+ * xAI's Grok, a locally-running Ollama, or anything else — now exposes (or
+ * has always exposed) an OpenAI-compatible /chat/completions endpoint, so
+ * they all share one code path and differ only in their base URL and whether
+ * a real API key is required (Ollama's isn't; it ignores whatever string you
+ * send). Anthropic-compat-endpoint details, and each vendor's actual base
+ * URL, are the kind of thing that changes, so PROVIDERS below is the one
+ * place to update if a vendor moves theirs.
+ *
  * Design principles:
  *   - Bring-your-own-key. The key is stored only in this browser (IndexedDB)
  *     and is sent only to the provider endpoint the user selected.
  *   - Explicit consent. Callers must check isEnabled() first; the UI makes the
  *     privacy tradeoff visible before any CV text is transmitted.
- *   - Provider-agnostic: Anthropic Messages API, or any OpenAI-compatible
- *     chat-completions endpoint (OpenAI, Azure, local servers, gateways).
  */
 (function (GCX) {
   'use strict';
 
+  // Single source of truth for provider defaults, shared by llm.js and the
+  // Settings UI (js/app.js reads PROVIDERS rather than duplicating this list).
+  // "family" picks the request/response shape: 'anthropic' or 'openai'
+  // (OpenAI-compatible chat/completions, which most providers now speak).
+  var PROVIDERS = {
+    anthropic: { label: 'Anthropic (Claude)', family: 'anthropic', defaultBaseUrl: '', modelPlaceholder: 'claude-3-5-haiku-latest', defaultModel: 'claude-3-5-haiku-latest', keyRequired: true },
+    openai: { label: 'OpenAI', family: 'openai', defaultBaseUrl: 'https://api.openai.com/v1', modelPlaceholder: 'gpt-4o-mini', defaultModel: 'gpt-4o-mini', keyRequired: true },
+    gemini: { label: 'Google Gemini', family: 'openai', defaultBaseUrl: 'https://generativelanguage.googleapis.com/v1beta', modelPlaceholder: 'gemini-2.5-flash', defaultModel: 'gemini-2.5-flash', keyRequired: true },
+    grok: { label: 'xAI (Grok)', family: 'openai', defaultBaseUrl: 'https://api.x.ai/v1', modelPlaceholder: 'grok-4-fast', defaultModel: 'grok-4-fast', keyRequired: true },
+    ollama: { label: 'Ollama (local, no key needed)', family: 'openai', defaultBaseUrl: 'http://localhost:11434/v1', modelPlaceholder: 'llama3.2', defaultModel: 'llama3.2', keyRequired: false },
+    custom: { label: 'Other (OpenAI-compatible)', family: 'openai', defaultBaseUrl: '', modelPlaceholder: 'model name for your endpoint', defaultModel: '', keyRequired: true }
+  };
+
   var DEFAULT = {
     enabled: false,
-    provider: 'anthropic',        // 'anthropic' | 'openai'
+    provider: 'anthropic',        // one of the PROVIDERS keys above
     apiKey: '',
     model: 'claude-3-5-haiku-latest',
-    baseUrl: '',                  // for openai-compatible custom endpoints
+    baseUrl: '',                  // overrides the provider's defaultBaseUrl when set
     allowCvText: false            // extra explicit consent to send CV text
   };
 
@@ -55,7 +77,21 @@
     return GCX.store ? GCX.store.setSetting('llm', cache) : Promise.resolve(cache);
   }
 
-  function isEnabled() { return !!(cache && cache.enabled && cache.apiKey); }
+  function presetFor(cfg) { return PROVIDERS[cfg && cfg.provider] || PROVIDERS.anthropic; }
+
+  // Ollama's OpenAI-compatible endpoint requires a non-empty Authorization
+  // value but doesn't check it, so an empty key there is not a missing key.
+  function effectiveApiKey(cfg) {
+    if (cfg.apiKey) return cfg.apiKey;
+    return presetFor(cfg).keyRequired === false ? 'local' : '';
+  }
+
+  function baseUrlFor(cfg) {
+    if (cfg.baseUrl && cfg.baseUrl.trim()) return cfg.baseUrl.trim().replace(/\/+$/, '');
+    return presetFor(cfg).defaultBaseUrl || 'https://api.openai.com/v1';
+  }
+
+  function isEnabled() { return !!(cache && cache.enabled && effectiveApiKey(cache)); }
 
   function extractJson(text) {
     if (!text) return null;
@@ -75,29 +111,34 @@
   function complete(prompt, opts) {
     opts = opts || {};
     return getConfig().then(function (cfg) {
-      if (!cfg.apiKey) throw new Error('No API key configured.');
-      if (cfg.provider === 'openai') {
-        var base = cfg.baseUrl && cfg.baseUrl.trim() ? cfg.baseUrl.replace(/\/+$/, '') : 'https://api.openai.com/v1';
-        return fetch(base + '/chat/completions', {
+      var key = effectiveApiKey(cfg);
+      if (!key) throw new Error('No API key configured.');
+      if (presetFor(cfg).family === 'openai') {
+        return fetch(baseUrlFor(cfg) + '/chat/completions', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + cfg.apiKey },
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
           body: JSON.stringify({
-            model: cfg.model, max_tokens: opts.maxTokens || 1024, temperature: opts.temperature != null ? opts.temperature : 0.4,
+            model: cfg.model || presetFor(cfg).defaultModel, max_tokens: opts.maxTokens || 1024, temperature: opts.temperature != null ? opts.temperature : 0.4,
             messages: [{ role: 'system', content: opts.system || 'You are a careful research-development analyst.' }, { role: 'user', content: prompt }]
           })
-        }).then(handle).then(function (j) { return j.choices[0].message.content; });
+        }).then(handle).then(function (j) { return j.choices[0].message.content; }).catch(function (e) {
+          if (cfg.provider === 'ollama' && e instanceof TypeError) {
+            throw new Error('Could not reach Ollama at ' + baseUrlFor(cfg) + '. Make sure `ollama serve` is running, and that OLLAMA_ORIGINS allows this page\u2019s origin (Ollama allows localhost by default, so this usually just works if the app itself is also running locally; a hosted copy of the app needs OLLAMA_ORIGINS set explicitly).');
+          }
+          throw e;
+        });
       }
-      // Default: Anthropic Messages API.
+      // Anthropic Messages API.
       return fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': cfg.apiKey,
+          'x-api-key': key,
           'anthropic-version': '2023-06-01',
           'anthropic-dangerous-direct-browser-access': 'true'
         },
         body: JSON.stringify({
-          model: cfg.model, max_tokens: opts.maxTokens || 1024,
+          model: cfg.model || presetFor(cfg).defaultModel, max_tokens: opts.maxTokens || 1024,
           system: opts.system || 'You are a careful research-development analyst.',
           messages: [{ role: 'user', content: prompt }]
         })
@@ -216,6 +257,7 @@
 
   GCX.llm = {
     DEFAULT: DEFAULT,
+    PROVIDERS: PROVIDERS,
     getConfig: getConfig,
     setConfig: setConfig,
     isEnabled: isEnabled,

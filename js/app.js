@@ -122,20 +122,6 @@
     openScholar(prof);
   }
 
-  function loadSamples() {
-    if (!GCX.samples) { toast('Sample data unavailable.', true); return; }
-    var existing = {}; state.profiles.forEach(function (p) { existing[p.name] = true; });
-    var n = 0;
-    GCX.samples.scholars.forEach(function (s) {
-      var prof = GCX.extract.buildProfile(s.text, { filename: s.filename });
-      if (existing[prof.name]) return;
-      state.profiles.push(prof); persist(prof); n++;
-    });
-    renderRoster(); updateCount();
-    if (!$('rfpText').value.trim()) $('rfpText').value = GCX.samples.rfp;
-    toast('Loaded ' + n + ' sample scholars and a sample RFP');
-  }
-
   // ---------- scholar edit modal ----------
   var modalCtx = null;
   function openScholar(p) {
@@ -565,7 +551,7 @@
     GCX.llm.getConfig().then(function (cfg) {
       $('llmProvider').value = cfg.provider; $('llmKey').value = cfg.apiKey || ''; $('llmModel').value = cfg.model || '';
       $('llmBaseUrl').value = cfg.baseUrl || ''; $('llmEnabled').checked = !!cfg.enabled; $('llmAllowCv').checked = !!cfg.allowCvText;
-      $('baseUrlField').hidden = cfg.provider !== 'openai';
+      applyProviderUI(cfg.provider);
       updateLlmBadge();
     });
     GCX.opportunities.getSettings().then(function (cfg) {
@@ -599,15 +585,34 @@
   function clearFundingCache() {
     if (GCX.store && GCX.store.clearCache) GCX.store.clearCache().then(function () { toast('Cached funding-search results cleared'); });
   }
+  var PROVIDER_HINTS = {
+    anthropic: '',
+    openai: '',
+    gemini: 'Uses Gemini\u2019s OpenAI-compatible endpoint. Get a key from Google AI Studio.',
+    grok: 'Uses xAI\u2019s OpenAI-compatible endpoint. Get a key from the xAI console.',
+    ollama: 'No API key needed \u2014 Ollama ignores whatever you send. Make sure `ollama serve` is running. Ollama allows localhost by default, so this just works if you\u2019re also running this app locally; if you\u2019re using a hosted copy of this app instead, Ollama will block it unless you set OLLAMA_ORIGINS to that page\u2019s address.',
+    custom: 'Point this at any OpenAI-compatible /chat/completions endpoint \u2014 Azure OpenAI, OpenRouter, a self-hosted gateway, vLLM, LM Studio, etc.'
+  };
+  function applyProviderUI(providerKey) {
+    var preset = (GCX.llm.PROVIDERS && GCX.llm.PROVIDERS[providerKey]) || {};
+    var isAnthropic = providerKey === 'anthropic';
+    $('baseUrlField').hidden = isAnthropic;
+    $('llmBaseUrl').placeholder = preset.defaultBaseUrl || 'https://...';
+    $('llmModel').placeholder = 'e.g. ' + (preset.modelPlaceholder || 'model name');
+    $('llmKey').placeholder = preset.keyRequired === false ? 'Not required for Ollama' : 'Paste your API key';
+    $('llmProviderHint').textContent = PROVIDER_HINTS[providerKey] || '';
+  }
   function updateLlmBadge() {
-    GCX.llm.getConfig().then(function (cfg) {
-      var on = cfg.enabled && cfg.apiKey;
+    GCX.llm.getConfig().then(function () {
+      var on = GCX.llm.isEnabled();
       var b = $('llmBadge'); b.textContent = on ? 'On' : 'Off'; b.className = 'badge ' + (on ? 'green' : 'amber');
     });
   }
   function saveLlm() {
+    var providerKey = $('llmProvider').value;
+    var preset = (GCX.llm.PROVIDERS && GCX.llm.PROVIDERS[providerKey]) || {};
     var cfg = {
-      provider: $('llmProvider').value, apiKey: $('llmKey').value.trim(), model: $('llmModel').value.trim() || (($('llmProvider').value === 'openai') ? 'gpt-4o-mini' : 'claude-3-5-haiku-latest'),
+      provider: providerKey, apiKey: $('llmKey').value.trim(), model: $('llmModel').value.trim() || preset.defaultModel || 'claude-3-5-haiku-latest',
       baseUrl: $('llmBaseUrl').value.trim(), enabled: $('llmEnabled').checked, allowCvText: $('llmAllowCv').checked
     };
     GCX.llm.setConfig(cfg).then(function () { updateLlmBadge(); toast('AI settings saved'); });
@@ -690,7 +695,6 @@
     $('fileInput').onchange = function (e) { ingestFiles(e.target.files); e.target.value = ''; };
     $('folderInput').onchange = function (e) { ingestFiles(e.target.files); e.target.value = ''; };
     $('addPasteBtn').onclick = addFromText;
-    $('loadSamplesBtn').onclick = loadSamples;
     $('exportRosterBtn').onclick = exportRoster;
     $('importRosterBtn').onclick = function () { $('importInput').click(); };
     $('importInput').onchange = function (e) { if (e.target.files[0]) importRoster(e.target.files[0]); e.target.value = ''; };
@@ -705,7 +709,6 @@
       $(id).oninput = function () { $(id + 'V').textContent = $(id).value; };
     });
     $('analyzeBtn').onclick = analyze;
-    $('rfpSampleBtn').onclick = function () { if (GCX.samples) { $('rfpText').value = GCX.samples.rfp; toast('Loaded sample RFP'); } };
     $('rfpUploadBtn').onclick = function () {
       var inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.pdf,.docx,.txt,.md,.rtf,.html,.htm';
       inp.onchange = function () { if (inp.files[0]) GCX.parse.parseFile(inp.files[0]).then(function (r) { $('rfpText').value = r.text; if (r.warning) toast(r.warning, true); else toast('Loaded ' + inp.files[0].name); }); };
@@ -725,7 +728,17 @@
     $('fundingClearCacheBtn').onclick = clearFundingCache;
 
     // settings
-    $('llmProvider').onchange = function () { $('baseUrlField').hidden = $('llmProvider').value !== 'openai'; };
+    $('llmProvider').onchange = function () {
+      applyProviderUI($('llmProvider').value);
+      // Auto-fill the base URL with the new provider's default, but only if
+      // the field is currently empty or still held a previous provider's
+      // default — never clobber something the user deliberately typed.
+      var preset = (GCX.llm.PROVIDERS && GCX.llm.PROVIDERS[$('llmProvider').value]) || {};
+      var allDefaults = Object.keys(GCX.llm.PROVIDERS || {}).map(function (k) { return GCX.llm.PROVIDERS[k].defaultBaseUrl; });
+      if (!$('llmBaseUrl').value.trim() || allDefaults.indexOf($('llmBaseUrl').value.trim()) !== -1) {
+        $('llmBaseUrl').value = preset.defaultBaseUrl || '';
+      }
+    };
     $('llmSaveBtn').onclick = saveLlm;
     $('llmTestBtn').onclick = testLlm;
     $('pdfEnhanced').onchange = function () {
